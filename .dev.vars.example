@@ -1,0 +1,2 @@
+# Wrangler local preview only. Production: npx wrangler secret put API_ORIGIN
+API_ORIGIN=https://your-backend.example.com
