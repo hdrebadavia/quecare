@@ -2,7 +2,7 @@
 
 This setup preserves the existing application. The intended deployment is Cloudflare Workers for the frontend, Render’s free Node/container hosting for Express, Supabase PostgreSQL and private Storage, and Resend. Render is the selected backend target through `render.yaml`; the Dockerfile is portable. The prototype will use Cloudflare’s provided `workers.dev` address, so no purchased domain is needed.
 
-No provider resources have been created by adding these files. A local Git repository has been initialized for this deployment. CI and Render repository integration still require publishing the source to your own private remote repository. Keep `.env`, `.local`, and production data out of that repository.
+Source is committed in [hdrebadavia/quecare](https://github.com/hdrebadavia/quecare). The frontend is published at https://quecare.quecare.workers.dev, and the Render Free service is https://quecare-api.onrender.com in Singapore. The Supabase Free project `quecare` (`lnmgziqdkoquqstmoluh`) is in Singapore and has the application schema and seven RHUs, without demo patients or users. Backend credentials and first-administrator provisioning are still required before the full application is live. Keep `.env`, `.local`, and production data out of Git.
 
 ## Architecture decisions
 
@@ -13,7 +13,7 @@ No provider resources have been created by adding these files. A local Git repos
 | Capacitor / Android | Deferred: packaging, native permissions, deep links and session handling require separate work and device testing. |
 | Supabase Auth | Keep backend cookie sessions, existing user IDs and role permissions. Supabase Auth is a separate migration. |
 | Edge Functions / PostgREST | Keep Express and direct PostgreSQL transactions. Do not expose tables via PostgREST. |
-| PostgreSQL / RLS | Use Supabase PostgreSQL. Existing facility/role/clinical access remains enforced by Express. Per-user RLS is not implemented. |
+| PostgreSQL / RLS | Use Supabase PostgreSQL. RLS and revoked client grants block direct client table access. Existing facility/role/clinical access remains enforced by Express using an owner connection. Per-user RLS is not implemented. |
 | Supabase Storage | Use the existing private-bucket adapter; only the backend has the service-role key. |
 | Realtime | Keep the current five-second polling and stale warnings. |
 | Gemini / Resend / FCM / OSRM | Configure existing Resend; retain optional Groq and local approved-information fallback. Gemini, push and mapping are separate feature work. |
@@ -38,7 +38,11 @@ For this domain-free prototype, Resend’s `onboarding@resend.dev` sender can be
 
 ## 2. Supabase PostgreSQL and Storage
 
-Before migrating, **disable the Data API** in the Supabase project's Data API settings. The app has no Supabase client authentication or RLS policies. Its `public` tables must not be reachable through anonymous/authenticated PostgREST requests. Keep the Data API disabled for this deployment. Do not add tables to Realtime publications. Disabling the Data API does not replace the existing backend's authorization and does not prevent its direct PostgreSQL connections.
+The app has no Supabase client authentication. Its tables must not be reachable through anonymous/authenticated PostgREST requests. The initial hosted migration creates the schema, enables RLS, and revokes all table privileges from both client roles in one transaction using `deploy/supabase/secure-tables.sql`. There are deliberately no client RLS policies. Express connects as the database owner, which bypasses RLS and preserves its existing authorization. Do not use a non-owner runtime role without configuring and validating compatible permissions. Disable the unused Data API in the project's Data API integration settings as an additional boundary, and do not add application tables to Realtime publications.
+
+For another Supabase deployment, keep the Data API disabled while running `npm run db:migrate`, then run `npm run db:secure:supabase` with the same owner connection before serving traffic. Apply the same RLS/grant controls to future application tables in their creating migration.
+
+Hosted verification found 23 application tables with RLS enabled and zero table privileges for `anon` or `authenticated`. Supabase's [RLS enabled with no policy advisory](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) is expected here: no direct client access is intended. Do not add permissive policies to clear that informational notice.
 
 Copy the actual PostgreSQL connection string from Supabase's Connect dialog. Use the direct endpoint when your backend supports its network requirements, otherwise the **session pooler on port 5432** for IPv4. URL-encode password characters. Use `sslmode=verify-full`; if a provider CA is required, supply `sslrootcert=/absolute/path/to/provider-ca.crt` in the URL and mount that certificate on the backend/provisioning host. Do not disable certificate verification. Enable SSL enforcement and restrict database network access to the hosting/provisioning egress addresses where available.
 
@@ -153,4 +157,4 @@ Monitor public `/api/health`, backend errors, email delivery failures, Storage f
 
 Passed locally: production frontend/TypeScript build; eight domain/gateway tests; all 19 PostgreSQL integration tests; the existing production browser smoke check; Worker type check and dry-run bundle; local Workers runtime serving the real frontend with CSP and returning uncached JSON for unconfigured API requests; production-configuration rejection/acceptance checks without secret output. Production dependency audit reported zero vulnerabilities.
 
-Docker is not installed on the preparation machine, so the container build remains unverified locally; the CI workflow includes it. Live database, private Storage, Resend delivery, public gateway/backend integration, proxy/rate-limit behavior and backup recovery remain release checks requiring provider accounts. No live deployment URL has been provisioned by this preparation.
+The published source passed GitHub CI, including PostgreSQL integration tests, the Worker dry run, and the Docker build. The frontend Worker has been uploaded with the Render API origin. The hosted database schema and seven RHUs have been provisioned. Complete backend credentials, the private Storage bucket, first-administrator setup, and public frontend/API verification before claiming a working deployment. Resend delivery, proxy/rate-limit behavior and backup recovery remain release checks.

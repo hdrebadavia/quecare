@@ -21,6 +21,7 @@ COPY package.json package-lock.json ./
 COPY server ./server
 COPY scripts ./scripts
 COPY --from=build /app/dist ./dist
+COPY deploy/supabase ./deploy/supabase
 RUN mkdir -p .local && chown node:node .local
 USER node
 EXPOSE 3001

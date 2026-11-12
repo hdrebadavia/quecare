@@ -1,9 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "quecare",
+  "account_id": "8406e6077750b1db4b4f7a228622b1d3",
   "main": "deploy/cloudflare/worker.ts",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
+  "vars": {
+    "API_ORIGIN": "https://quecare-api.onrender.com"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
