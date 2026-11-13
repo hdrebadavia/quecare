@@ -10,20 +10,20 @@ Allow approximately **45–60 minutes** for the main presentation. Use the addit
 
 | Order | Feature / presentation segment | Presenter workspace | Approx. time |
 | --- | --- | --- | --- |
-| 1 | Introduction, RHU selection, and public care hub | Guest | 3 minutes |
+| 1 | Introduction, Health Unit selection, and public care hub | Guest | 3 minutes |
 | 2 | Sign-in and role-based workspaces | All roles | 3 minutes |
 | 3 | Daily session, QR registration, and public monitor | Facility administrator | 4 minutes |
 | 4 | Guest registration and staff arrival confirmation | Guest → Queue Officer | 5 minutes |
 | 5 | Calling, service, station transfer, and visit completion | Queue Officer / provider | 6 minutes |
 | 6 | Activity creation, booking, rescheduling, and check-in | Administrator → patient → Queue Officer | 8 minutes |
 | 7 | Clinical notes, attachments, and patient access | Provider → patient | 4 minutes |
-| 8 | Selected-record sharing, destination approval, and revocation | Patient → RHU 4 provider → patient | 5 minutes |
+| 8 | Selected-record sharing, destination approval, and revocation | Patient → Health Unit 4 provider → patient | 5 minutes |
 | 9 | Directory approval, announcements, and information assistant | Facility administrator → CHO → guest | 5 minutes |
 | 10 | Staff permissions, queue configuration, and CHO oversight | Facility administrator / CHO | 4 minutes |
 | 11 | Reports, baseline observations, CSV export, and audit trail | Facility administrator / CHO | 4 minutes |
 | 12 | End-of-day closure and closing explanation | Facility administrator | 2 minutes |
 
-**Opening script:** “QueCare supports patient services across Meycauayan RHUs 2, 4, 5, 6, 7, 9, and 10. We will follow a patient from registration through the queue, appointments, and basic visit documentation, then show how staff manage access, approved information, and operational reports.”
+**Opening script:** “QueCare supports patient services across Meycauayan Health Units 2, 4, 5, 6, 7, 9, and 10. We will follow a patient from registration through the queue, appointments, and basic visit documentation, then show how staff manage access, approved information, and operational reports.”
 
 ## 2. Test accounts
 
@@ -33,31 +33,31 @@ These accounts are defined in [server/seed.ts](../server/seed.ts). They are avai
 
 | Role | Name | Email / username | Password | Initial scope and use |
 | --- | --- | --- | --- | --- |
-| CHO / System administrator | Daniel Santos | `admin@quecare.local` | `QueCareDemo2026!` | Can switch among all seven RHUs; appoint facility administrators and approve directory content. |
-| Facility administrator | Maria Reyes | `facility@quecare.local` | `QueCareDemo2026!` | RHU 2 operations, daily sessions, staff, activities, reports, and monitor. |
-| Queue Officer | Ana Cruz | `officer@quecare.local` | `QueCareDemo2026!` | Assigned to all four seeded RHU 2 queues; assisted registration and queue operation. |
-| Healthcare provider / nurse | Nurse Isabel Garcia | `nurse@quecare.local` | `QueCareDemo2026!` | RHU 2 clinical documentation and all four queues; activity-management permission is enabled. |
+| CHO / System administrator | Daniel Santos | `admin@quecare.local` | `QueCareDemo2026!` | Can switch among all configured Health Units; appoint facility administrators and approve directory content. |
+| Facility administrator | Maria Reyes | `facility@quecare.local` | `QueCareDemo2026!` | Health Unit 2 operations, daily sessions, staff, activities, reports, and monitor. |
+| Queue Officer | Ana Cruz | `officer@quecare.local` | `QueCareDemo2026!` | Assigned to all four seeded Health Unit 2 queues; assisted registration and queue operation. |
+| Healthcare provider / nurse | Nurse Isabel Garcia | `nurse@quecare.local` | `QueCareDemo2026!` | Health Unit 2 clinical documentation and all four queues; activity-management permission is enabled. |
 | Registered patient | Andrea Mendoza | `patient@quecare.local` | `QueCareDemo2026!` | Own appointments, tracking, records, and sharing. Date of birth: **12 April 1996**. |
 | Guest patient | Enter a fictional patient | No account | None | Daily QR registration and private tracking; no login required. |
 
-**Additional account for the cross-RHU demonstration — create before presenting:**
+**Additional account for the cross-Health Unit demonstration — create before presenting:**
 
 | Role | Name | Email | Suggested test-only password | Creation steps |
 | --- | --- | --- | --- | --- |
-| Healthcare provider, RHU 4 | Demo RHU 4 Provider | `provider.rhu4@quecare.local` | `QueCareDemo2026!` | Sign in as CHO, select RHU 4, open **Administration → Staff & permissions → Add staff member**, choose **Healthcare Provider**, and save. |
+| Healthcare provider, Health Unit 4 | Demo Health Unit 4 Provider | `provider.rhu4@quecare.local` | `QueCareDemo2026!` | Sign in as CHO, select Health Unit 4, open **Administration → Staff & permissions → Add staff member**, choose **Healthcare Provider**, and save. |
 
-The RHU 4 provider is **not seeded**. A CHO account cannot substitute for a clinical provider during record-sharing approval. Create any other optional accounts under clearly labeled demonstration names.
+The Health Unit 4 provider is **not seeded**. A CHO account cannot substitute for a clinical provider during record-sharing approval. Create any other optional accounts under clearly labeled demonstration names.
 
 ## 3. Preparation checklist
 
 1. For a new local demo installation, follow the [README](../README.md): install dependencies with `npm install`, run `npm run setup`, then `npm run dev`. Open **http://localhost:5173**. Do not run setup or seeding against a real patient database.
-2. If the app is already configured, start it with `npm run dev`. Check today's RHU 2 session. On a later demonstration day, the operator can run `npm run db:seed` against the demo database to add that day's sample queue session. Seeding preserves existing data; it does not provide a clean reset or reopen a closed session.
-3. Use RHU 2 for the main story. Its seeded stations are **Triage**, **Consultation**, **Nurse Station**, and **Vaccination**, with sample hours of **07:00–18:00**. Check queue status and staff assignments. Outside hours, enter the required truthful demo override reason when issuing/checking in a number.
-4. Keep separate browser profiles or separate browser applications for the administrator, Queue Officer, provider, patient, guest, and RHU 4 provider as needed. Tabs within one profile share the login. Keep the monitor in the administrator's profile. For fewer profiles, sign out and sign in between segments.
+2. If the app is already configured, start it with `npm run dev`. Check today's Health Unit 2 session. On a later demonstration day, the operator can run `npm run db:seed` against the demo database to add that day's sample queue session. Seeding preserves existing data; it does not provide a clean reset or reopen a closed session.
+3. Use Health Unit 2 for the main story. Its seeded stations are **Triage**, **Consultation**, **Nurse Station**, and **Vaccination**, with sample hours of **07:00–18:00**. Check queue status and staff assignments. Outside hours, enter the required truthful demo override reason when issuing/checking in a number.
+4. Keep separate browser profiles or separate browser applications for the administrator, Queue Officer, provider, patient, guest, and Health Unit 4 provider as needed. Tabs within one profile share the login. Keep the monitor in the administrator's profile. For fewer profiles, sign out and sign in between segments.
 5. Open the base address `/` when switching from a registration or tracking link back to the workspace. Links containing `?join=`, `?track=`, or `?monitor=` open dedicated screens.
 6. Prepare a fictional guest, for example **Demo Walkthrough Patient**, born **15 June 1990**, barangay **Calvario**, with no real contact details. Reuse that person's existing profile if repeating the demo.
 7. Prepare a small PDF, PNG, or JPEG containing only fictional content, at most **5 MB**, for attachment upload.
-8. Create the RHU 4 provider account from Section 2. Confirm that Andrea's seeded RHU 2 sample note appears when signed in as the patient. To create an additional note, Andrea must first have a visit at RHU 2; the seeded note alone does not establish a visit for her.
+8. Create the Health Unit 4 provider account from Section 2. Confirm that Andrea's seeded Health Unit 2 sample note appears when signed in as the patient. To create an additional note, Andrea must first have a visit at Health Unit 2; the seeded note alone does not establish a visit for her.
 9. Prepare the appointment timing below. Seeded activities are initially scheduled three days after seeding and are created only if there are no activities; do not assume they are still bookable on presentation day.
 10. Leave **Close session** until the final segment. A session closed today cannot be reopened today.
 
@@ -77,14 +77,14 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 **Steps:**
 
-1. Open the app and select **RHU 2** using **Health facility**.
+1. Open the app and select **Health Unit 2** using **Health Unit**.
 2. Show **My care hub**, the station cards, **Book your visit**, **Follow your number**, and **Know before you go**.
-3. Select another RHU to show facility-specific information, then return to RHU 2.
+3. Select another Health Unit to show facility-specific information, then return to Health Unit 2.
 4. On a narrow screen, show **Open navigation**.
 
-**Say:** “Patients can view approved information and queue conditions without an account. They choose the RHU they intend to visit. A patient account adds self-booking and access to their own records.”
+**Say:** “Patients can view approved information and queue conditions without an account. They choose the Health Unit they intend to visit. A patient account adds self-booking and access to their own records.”
 
-**Show as evidence:** The selected RHU changes. Queue cards display numbers and operational information without exposing patient names. An unavailable average means there are insufficient observations, rather than zero waiting time.
+**Show as evidence:** The selected Health Unit changes. Queue cards display numbers and operational information without exposing patient names. An unavailable average means there are insufficient observations, rather than zero waiting time.
 
 ### Feature 2 — Authentication and role-based navigation
 
@@ -93,23 +93,23 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 **Steps:**
 
 1. Select **Sign in / Register**, enter the facility administrator credentials, and select **Sign in**.
-2. Point out the name, role, RHU, and staff navigation.
+2. Point out the name, role, Health Unit, and staff navigation.
 3. Briefly switch to the Queue Officer, provider, and patient profiles to compare menus.
 4. Show the **Sign out** icon. Demo workspace shortcuts, when enabled, are optional; manual sign-in demonstrates the actual credentials.
 
-**Say:** “Access follows the account's role, RHU, and queue assignments. Providers can document care; administrators manage operations. Administrator status does not grant clinical-note access.”
+**Say:** “Access follows the account's role, Health Unit, and queue assignments. Providers can document care; administrators manage operations. Administrator status does not grant clinical-note access.”
 
-**Show as evidence:** **Patient records** appears for providers and patients. **Administration** and **Reports & insights** appear for administrators. Facility staff stay within their assigned RHU.
+**Show as evidence:** **Patient records** appears for providers and patients. **Administration** and **Reports & insights** appear for administrators. Facility staff stay within their assigned Health Unit.
 
 ### Feature 3 — Daily session, registration QR, and waiting-area monitor
 
-**Account:** Facility administrator at RHU 2.
+**Account:** Facility administrator at Health Unit 2.
 
 **Steps:**
 
 1. Open **Overview → Open daily session**, or **Live queues → Open session**, if today's session is not already open.
 2. Select **Show QR code** or **Daily QR**.
-3. Show the RHU and date; use **Copy registration link** for the guest profile.
+3. Show the Health Unit and date; use **Copy registration link** for the guest profile.
 4. Select **Open live monitor** or **Monitor** and show its separate tab. Use **Enter fullscreen** if appropriate.
 
 **Say:** “Each operating day has a registration session and QR. The QR starts a pending registration; staff still verify physical arrival. The waiting-area monitor displays multiple stations and numbers together.”
@@ -123,7 +123,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 **Steps:**
 
 1. Scan today's QR or open the copied registration link.
-2. Confirm RHU 2 and today's date; select **Continue as a guest**.
+2. Confirm Health Unit 2 and today's date; select **Continue as a guest**.
 3. Enter the fictional patient's name, date of birth, and barangay. Complete consent; provide a guardian/representative when required, including for a minor.
 4. Choose **Triage** under **Where do you need to go?**.
 5. Select **Register for arrival confirmation**.
@@ -135,7 +135,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 ### Feature 5 — Arrival confirmation, number issuance, and priority
 
-**Account:** Queue Officer at RHU 2.
+**Account:** Queue Officer at Health Unit 2.
 
 **Steps:**
 
@@ -145,7 +145,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 4. Enter an outside-hours reason if required; select **Confirm arrival & issue number**.
 5. Return to the guest's tracking page and allow approximately five seconds for the visible screen to refresh.
 
-**Say:** “Staff issue the number after checking that the patient is present. Validated priority is a staff decision, and its reason remains private. A patient keeps one number through the RHU visit.”
+**Say:** “Staff issue the number after checking that the patient is present. Validated priority is a staff decision, and its reason remains private. A patient keeps one number through the Health Unit visit.”
 
 **Show as evidence:** The pending registration disappears, an active number appears in the entry queue, and private tracking shows the number, station, and position.
 
@@ -180,7 +180,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 5. Use **Edit activity**, set **Published · patients can book during booking hours**, and select **Save activity**.
 6. Show **Available to patients** and the independent capacity of each slot.
 
-**Say:** “An activity belongs to one RHU even if the venue is outside the health unit. Staff set its requirements, booking period, arrival station, and capacity per slot. Publishing makes it available to patients during the booking period.”
+**Say:** “An activity belongs to one Health Unit even if the venue is outside the health unit. Staff set its requirements, booking period, arrival station, and capacity per slot. Publishing makes it available to patients during the booking period.”
 
 **Show as evidence:** The draft is staff-only; the published activity is visible to patients. Booking close must follow booking open and be no later than the first slot start. Slots cannot overlap, and capacity is 1–1,000 per slot.
 
@@ -190,7 +190,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 **Steps:**
 
-1. Sign in as `patient@quecare.local` and select RHU 2.
+1. Sign in as `patient@quecare.local` and select Health Unit 2.
 2. Open **Activities & booking**, find the demo activity, and select **Choose a timeslot**.
 3. Choose slot 2 and select **Confirm booking**; show the reference in **Appointments**.
 4. Before booking closes, select **Reschedule**, choose slot 1, and select **Update booking**.
@@ -203,7 +203,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 ### Feature 9 — Appointment arrival confirmation and live queue entry
 
-**Account:** Queue Officer at RHU 2.
+**Account:** Queue Officer at Health Unit 2.
 
 **Steps:**
 
@@ -219,37 +219,37 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 ### Feature 10 — Clinical visit notes and private attachments
 
-**Account:** Nurse/provider at RHU 2.
+**Account:** Nurse/provider at Health Unit 2.
 
 **Steps:**
 
 1. Open **Patient records**, search for **Andrea Mendoza**, and verify the date of birth before selecting her.
-2. Confirm the RHU 2 visit from Feature 9 appears in the history.
+2. Confirm the Health Unit 2 visit from Feature 9 appears in the history.
 3. Select **Document visit**. Enter a summary such as “Fictional walkthrough visit; demonstration only,” plus appropriate fictional allergies/flags.
 4. Select **Save visit summary**.
-5. On that RHU 2 note, select **Attach PDF or image** and upload the prepared fictional file.
+5. On that Health Unit 2 note, select **Attach PDF or image** and upload the prepared fictional file.
 6. Sign in as Andrea and open **Patient records** to view the note and download the attachment.
 
 **Say:** “Providers add facility-attributed visit summaries and private attachments. The patient can read their own records. Notes are appended; this interface does not edit or delete a saved summary.”
 
-**Show as evidence:** The note identifies the RHU, provider, and date. Its attachment is available to authorized readers. A new note requires an existing local visit and is associated with the latest visit at that provider's RHU.
+**Show as evidence:** The note identifies the Health Unit, provider, and date. Its attachment is available to authorized readers. A new note requires an existing local visit and is associated with the latest visit at that provider's Health Unit.
 
-### Feature 11 — Share selected records with another RHU and revoke access
+### Feature 11 — Share selected records with another Health Unit and revoke access
 
-**Accounts:** Andrea → additional RHU 4 provider → Andrea.
+**Accounts:** Andrea → additional Health Unit 4 provider → Andrea.
 
 **Steps:**
 
 1. As Andrea, open **Patient records → Share selected records**.
-2. Choose **RHU 4**. Select only the newly documented note, leaving the seeded sample note unselected so the scope is clear.
+2. Choose **Health Unit 4**. Select only the newly documented note, leaving the seeded sample note unselected so the scope is clear.
 3. Enter fictional consent/request details, tick the authorization statement, and select **Request record sharing**.
 4. Show the **pending** authorization.
 5. As `provider.rhu4@quecare.local`, open **Patient records** and review **Record sharing authorizations**.
 6. After verifying the fictional patient's identity and consent for the selected record, select **Verify consent & approve** and confirm.
-7. Search for Andrea and show the selected RHU 2 note and attachment. The unselected note should remain unavailable through this grant.
-8. As Andrea, select **Revoke** for that authorization. Refresh the RHU 4 provider's record view and check that the grant no longer provides access.
+7. Search for Andrea and show the selected Health Unit 2 note and attachment. The unselected note should remain unavailable through this grant.
+8. As Andrea, select **Revoke** for that authorization. Refresh the Health Unit 4 provider's record view and check that the grant no longer provides access.
 
-**Say:** “Sharing is for specific records and a destination RHU. Patient requests require destination-provider verification. Approval does not unlock every note or automatically include future notes. Revocation ends access through this grant.”
+**Say:** “Sharing is for specific records and a destination Health Unit. Patient requests require destination-provider verification. Approval does not unlock every note or automatically include future notes. Revocation ends access through this grant.”
 
 **Show as evidence:** Pending → approved → revoked. For a clear revocation demonstration, ensure there is no other approved grant for the same note and destination. Revocation does not recall an attachment already downloaded.
 
@@ -259,10 +259,10 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 **Steps:**
 
-1. As facility administrator at RHU 2, open **Service directory → Add information**.
-2. Choose **Frequently asked question**. Use the title **Walkthrough: what should I bring?**, a fictional demo answer, and a source labeled **Demonstration content — not actual RHU policy**.
+1. As facility administrator at Health Unit 2, open **Service directory → Add information**.
+2. Choose **Frequently asked question**. Use the title **Walkthrough: what should I bring?**, a fictional demo answer, and a source labeled **Demonstration content — not actual Health Unit policy**.
 3. Select **Save information** and show **Awaiting CHO approval** under **Review content**.
-4. As CHO, select RHU 2, open **Service directory → Review content**, and select **Approve & publish**.
+4. As CHO, select Health Unit 2, open **Service directory → Review content**, and select **Approve & publish**.
 5. As guest, open **Service directory** and show the newly published entry with its source and date.
 6. Explain that CHO can use **Unpublish** to withdraw it, or **Remove** to delete it. Withdraw the temporary entry after the demonstration.
 
@@ -288,7 +288,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 ### Feature 14 — Queue configuration and staff permissions
 
-**Account:** Facility administrator at RHU 2.
+**Account:** Facility administrator at Health Unit 2.
 
 **Steps:**
 
@@ -303,24 +303,24 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 **Show as evidence:** The station status and staff assignments persist. Disabling the account revokes its sessions. A station with history is archived when retired; an unused one can be deleted after confirmation. Resolve active patients before closing or retiring a station.
 
-### Feature 15 — CHO oversight across RHUs
+### Feature 15 — CHO oversight across Health Units
 
 **Account:** CHO / System administrator.
 
 **Steps:**
 
-1. Use **Health facility** to switch from RHU 2 to RHU 4.
-2. Show **Overview**, **Administration**, and **Reports & insights** for the selected RHU.
+1. Use **Health Unit** to switch from Health Unit 2 to Health Unit 4.
+2. Show **Overview**, **Administration**, and **Reports & insights** for the selected Health Unit.
 3. Open **Staff & permissions → Add staff member** to show the **Facility Administrator** role option. Use a unique fictional account if demonstrating creation.
-4. Return to RHU 2 before the reporting and closure segments.
+4. Return to Health Unit 2 before the reporting and closure segments.
 
-**Say:** “CHO can oversee all participating RHUs and appoint facility administrators. Each screen and export follows the selected RHU, so we verify the facility before making changes.”
+**Say:** “CHO can oversee all participating Health Units and appoint facility administrators. Each screen and export follows the selected Health Unit, so we verify the facility before making changes.”
 
-**Show as evidence:** RHU-specific queues and reports change with the selector. Do not describe this as a combined all-RHU analytics dashboard. CHO still has no routine clinical-note access.
+**Show as evidence:** Health Unit-specific queues and reports change with the selector. Do not describe this as a combined all-Health Unit analytics dashboard. CHO still has no routine clinical-note access.
 
 ### Feature 16 — Reports, baseline observations, and CSV export
 
-**Account:** Facility administrator or CHO at RHU 2.
+**Account:** Facility administrator or CHO at Health Unit 2.
 
 **Steps:**
 
@@ -336,7 +336,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 ### Feature 17 — Recent audit trail
 
-**Account:** Facility administrator or CHO at RHU 2.
+**Account:** Facility administrator or CHO at Health Unit 2.
 
 **Steps:**
 
@@ -344,17 +344,17 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 2. Identify recent actions from the demonstration, along with their actor and time.
 3. Relate an event to the corresponding operation, such as a permission or queue change.
 
-**Say:** “The audit trail makes recent access and changes reviewable by authorized administrators. This screen shows the latest 100 events available for the RHU.”
+**Say:** “The audit trail makes recent access and changes reviewable by authorized administrators. This screen shows the latest 100 events available for the Health Unit.”
 
 **Show as evidence:** Relevant events appear with staff identity and timestamp. This is a recent-event view, not a complete audit export.
 
 ### Feature 18 — End-of-day session closure
 
-**Account:** Facility administrator at RHU 2. Perform only after every other live demonstration is complete.
+**Account:** Facility administrator at Health Unit 2. Perform only after every other live demonstration is complete.
 
 **Steps:**
 
-1. Review waiting, skipped, called, serving, and station-completed patients across the RHU. Finish intended care journeys.
+1. Review waiting, skipped, called, serving, and station-completed patients across the Health Unit. Finish intended care journeys.
 2. Open **Live queues → Close session**.
 3. Read the consequences, tick **I have checked the remaining patients**, and select **Close daily session**.
 4. Show the closed state. In the guest profile, reopen today's QR link to demonstrate expiry.
@@ -380,9 +380,9 @@ Use these when the audience needs a fuller review. Keep them separate from the m
 | Activity edits and cancellation | Manager: edit a separate activity; demonstrate a permitted description/capacity change. Review **Patient roster**, then **Cancel**, tick **I will notify affected patients**, and **Cancel activity**. | “Reserved capacity cannot be reduced below existing reservations. Canceling an activity requires staff follow-up.” | Confirmed reservations are canceled with the activity. Automatic mass messaging is not included. Reserved slot times cannot be moved or deleted. |
 | Guest-to-account linking | Prepare a fictional guest history and a separate patient account with matching name/birth date whose account profile has no care history. Queue Officer/admin: **Issue number**, select the guest, expand **Link this guest profile to a patient account**, verify identity/account ownership, enter email and a verification note of at least 10 characters, tick verification, then **Link verified account**. | “Verified linking connects a guest's existing history to an otherwise unused matching account.” | The account accesses the guest history. Do not use Andrea's seeded account: its existing clinical record makes it unsuitable. Historical profile merging is refused. |
 | Provider-assisted sharing | Provider: select a verified fictional patient, open **Share selected records**, choose destination and exact notes, enter verified consent details, tick verification, then **Record verified sharing consent**. | “Provider-assisted consent supports guests without a login.” | An approved authorization is created directly. The provider can share only notes they are authorized to access. |
-| Destination-provider revocation | Destination provider: find an authorization addressed to their RHU under **Patient records**, select **Revoke**, then refresh the record view. | “A destination provider can withdraw an authorization addressed to their RHU.” | The grant is revoked. The originating provider does not automatically control all outgoing grants. |
+| Destination-provider revocation | Destination provider: find an authorization addressed to their Health Unit under **Patient records**, select **Revoke**, then refresh the record view. | “A destination provider can withdraw an authorization addressed to their Health Unit.” | The grant is revoked. The originating provider does not automatically control all outgoing grants. |
 | Outage reconciliation | After connectivity is restored, Queue Officer: **Issue number**, verify the patient, choose station, expand **Reconcile a paper registration after an outage**, tick the outage statement, enter today's original nonfuture arrival in Manila time, and submit. | “Paper arrivals can be encoded after reconnection. This records the arrival rather than replaying the entire paper care journey.” | The visit is reconstructed and excluded from timing averages. Reconcile its system number with the paper log. |
-| Connection interruption | In an isolated demo browser, temporarily disconnect networking and wait for polling to fail. Show the stale/connection warning, then reconnect and refresh. | “Live operation needs connectivity. During outages staff use the RHU's paper process and announcements.” | Stale warnings appear; normal queue controls are disabled when updates fail. Cached screens are not an offline operating mode. |
+| Connection interruption | In an isolated demo browser, temporarily disconnect networking and wait for polling to fail. Show the stale/connection warning, then reconnect and refresh. | “Live operation needs connectivity. During outages staff use the Health Unit's paper process and announcements.” | Stale warnings appear; normal queue controls are disabled when updates fail. Cached screens are not an offline operating mode. |
 | Cost-reference validation | Administrator: **Service directory → Add information → Third-party cost reference**. Show the minimum/maximum PHP and source fields without publishing invented prices. If an institution-approved reference exists, submit it and use CHO review. | “Public cost information requires a sourced range and approval. The assistant does not invent prices.” | An unsourced reference cannot be accepted as a complete cost entry; only approved content is publicly available. |
 
 ## 6. Presentation completion checklist
@@ -392,13 +392,26 @@ Use these when the audience needs a fuller review. Keep them separate from the m
 - Calling, service start, station completion, transfer, and visit completion were distinguished.
 - A booking became a checked-in visit through appointment check-in.
 - A provider saved a fictional note, and the patient accessed the note/attachment.
-- Only selected records became available at RHU 4 after approval; revocation was demonstrated.
+- Only selected records became available at Health Unit 4 after approval; revocation was demonstrated.
 - Facility submission and CHO publication were shown separately.
 - The assistant displayed approved sources and its information-only scope.
-- Queue/staff access, RHU scope, reports, CSV export, and audit events were shown.
+- Queue/staff access, Health Unit scope, reports, CSV export, and audit events were shown.
 - Temporary accounts/content were disabled or withdrawn as appropriate. Keep demo data separate from research observations.
 - Closure was performed only if no further same-day demonstration needs the session.
 
 **Closing script:** “This walkthrough showed how QueCare connects verified arrivals, station queues, appointments, and basic visit records while keeping clinical access role-based and sharing specific to selected notes. Its reports support operational evaluation; research conclusions still require measured baselines and external analysis. This build uses fictional data for local evaluation.”
 
 For detailed operating instructions, see the [user manual](user-manual.md). For technical setup, see the [README](../README.md); for implemented scope and deployment work, see the [system description](system-description.md) and [implementation notes](implementation.md).
+
+### Demonstrate configurable Health Units
+
+**Account:** CHO/system administrator. Use a new fictional unit for this demonstration.
+
+1. Open **Administration → Health Units** and select **Add Health Unit**. Enter a unique fictional name, address, and announcement. Create it and show that it has zero assigned users.
+2. Select **Edit**, change the name, and choose **Review changes**. Show the old/new values and the warning that assignments and records keep their links while historical displays use the new name. Close the dialog to demonstrate cancellation, then repeat and confirm the edit.
+3. Show that the selector displays the configured name directly. New units need queue stations and staff configured before operation.
+4. Show the deletion blockers for the populated demo unit, including its assigned users. Disabled users still block deletion.
+5. Delete only the unused fictional unit: verify its name, acknowledge permanent deletion, and confirm. Show that it disappears from the selector and the selected unit falls back to another available unit.
+6. Open **Announcements**, edit the message, and cancel the publication confirmation to demonstrate that the existing announcement stays saved.
+
+**Say:** “Only CHO/system administrators manage Health Units. Deleting a unit with users or linked operational data is blocked by the server. Audit history remains after an unused unit is deleted.”

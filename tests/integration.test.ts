@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import type { Express } from 'express';
 const suite=process.env.RUN_DB_TESTS==='1'?describe:describe.skip;
 suite('PostgreSQL-backed application workflows',()=>{
-  let app:Express,db:pg.Pool,root:pg.Pool,schema:string,f:any,q:any,q2:any,s:any,admin:any,officer:any,provider:any,patient:any,patient2:any,p:any,p2:any;
+  let app:Express,db:pg.Pool,root:pg.Pool,schema:string,f:any,q:any,q2:any,s:any,systemAdmin:any,admin:any,officer:any,provider:any,patient:any,patient2:any,p:any,p2:any;
   const csrf=new WeakMap<object,string>();
   async function login(email:string){const a=request.agent(app);await a.post('/api/auth/login').send({email,password:'TestPassword123!'}).expect(200);const me=await a.get('/api/auth/me').expect(200);csrf.set(a,me.body.csrf);return a;}
   function post(a:any,url:string,body:any={}){return a.post('/api'+url).set('X-CSRF-Token',csrf.get(a)!).send(body);}
@@ -25,10 +25,105 @@ suite('PostgreSQL-backed application workflows',()=>{
     q=(await db.query("INSERT INTO queues(facility_id,name,opens_at,cutoff) VALUES($1,'Triage','00:00','23:59') RETURNING *",[f.id])).rows[0];q2=(await db.query("INSERT INTO queues(facility_id,name,opens_at,cutoff) VALUES($1,'Nurse','00:00','23:59') RETURNING *",[f.id])).rows[0];
     s=(await db.query("INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,(now() AT TIME ZONE 'Asia/Manila')::date,$2) RETURNING *",[f.id,randomBytes(24).toString('hex')])).rows[0];
     const hash=await bcrypt.hash('TestPassword123!',4);const users:any={};
-    for(const role of ['facility_admin','queue_officer','provider','patient','patient2']){const email=randomUUID()+'@test.local';const u=(await db.query('INSERT INTO users(name,email,password_hash,role,facility_id,can_manage_activities) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',[role,email,hash,role==='patient2'?'patient':role,role.startsWith('patient')?null:f.id,role==='provider'])).rows[0];users[role]=u;}
+    for(const role of ['system_admin','facility_admin','queue_officer','provider','patient','patient2']){const email=randomUUID()+'@test.local';const u=(await db.query('INSERT INTO users(name,email,password_hash,role,facility_id,can_manage_activities) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',[role,email,hash,role==='patient2'?'patient':role,role.startsWith('patient')?null:f.id,role==='provider'])).rows[0];users[role]=u;}
     await db.query('INSERT INTO queue_assignments(user_id,queue_id) VALUES($1,$2)',[users.queue_officer.id,q.id]);
     for(const name of ['patient','patient2'])await db.query("INSERT INTO patients(user_id,name,birth_date) VALUES($1,$2,'1990-01-01')",[users[name].id,name]);
-    admin=await login(users.facility_admin.email);officer=await login(users.queue_officer.email);provider=await login(users.provider.email);patient=await login(users.patient.email);patient2=await login(users.patient2.email);p=(await db.query('SELECT * FROM patients WHERE user_id=$1',[users.patient.id])).rows[0];p2=(await db.query('SELECT * FROM patients WHERE user_id=$1',[users.patient2.id])).rows[0];
+    systemAdmin=await login(users.system_admin.email);admin=await login(users.facility_admin.email);officer=await login(users.queue_officer.email);provider=await login(users.provider.email);patient=await login(users.patient.email);patient2=await login(users.patient2.email);p=(await db.query('SELECT * FROM patients WHERE user_id=$1',[users.patient.id])).rows[0];p2=(await db.query('SELECT * FROM patients WHERE user_id=$1',[users.patient2.id])).rows[0];
+  });
+  function mutate(a:any,method:'put'|'delete',path:string,body={}){return a[method]('/api'+path).set('X-CSRF-Token',csrf.get(a)!).send(body);}
+  async function newUnit(){return (await post(systemAdmin,'/admin/facilities',{name:'Configurable '+randomUUID(),address:'Original address',announcement:'Welcome'}).expect(200)).body;}
+  it('restricts all Health Unit management endpoints to system administrators',async()=>{
+    for(const a of [admin,officer,provider,patient]){
+      await a.get('/api/admin/facilities').expect(403);
+      await post(a,'/admin/facilities',{name:'Forbidden'}).expect(403);
+      await mutate(a,'put',`/admin/facilities/${f.id}`,{name:'Forbidden'}).expect(403);
+      await mutate(a,'delete',`/admin/facilities/${f.id}`).expect(403);
+    }
+    await request(app).get('/api/admin/facilities').expect(401);
+    await request(app).get('/api/facilities').expect(200);
+  });
+  it('validates Health Unit fields and rejects duplicate names',async()=>{
+    const unit=await newUnit();
+    for(const fields of [{name:' '},{name:'x'.repeat(201)},{name:'Valid',address:'x'.repeat(1001)},{name:'Valid',announcement:'x'.repeat(501)}]){
+      await post(systemAdmin,'/admin/facilities',fields).expect(400);
+      await mutate(systemAdmin,'put',`/admin/facilities/${unit.id}`,fields).expect(400);
+    }
+    await post(systemAdmin,'/admin/facilities',{name:' '+unit.name+' '}).expect(409);
+    const other=await newUnit();
+    await mutate(systemAdmin,'put',`/admin/facilities/${other.id}`,{name:unit.name}).expect(409);
+    const trimmed=await post(systemAdmin,'/admin/facilities',{name:' Trimmed '+randomUUID()+' '}).expect(200);
+    expect(trimmed.body.name).toBe(trimmed.body.name.trim());
+    await mutate(systemAdmin,'put',`/admin/facilities/${randomUUID()}`,{name:'Missing'}).expect(404);
+    await mutate(systemAdmin,'delete',`/admin/facilities/${randomUUID()}`).expect(404);
+  });
+  it('renames in place while preserving staff assignments, record links and access',async()=>{
+    const beforeUsers=(await db.query('SELECT id,facility_id FROM users WHERE facility_id=$1 ORDER BY id',[f.id])).rows;
+    const author=(await provider.get('/api/auth/me')).body.user.id;
+    const record=(await db.query("INSERT INTO clinical_records(patient_id,facility_id,author_id,summary) VALUES($1,$2,$3,'Existing note') RETURNING id",[p.id,f.id,author])).rows[0];
+    const updated=await mutate(systemAdmin,'put',`/admin/facilities/${f.id}`,{name:'Updated '+randomUUID(),address:'New address',announcement:'Updated announcement'}).expect(200);
+    expect(updated.body.id).toBe(f.id);
+    expect((await db.query('SELECT id,facility_id FROM users WHERE facility_id=$1 ORDER BY id',[f.id])).rows).toEqual(beforeUsers);
+    const records=await provider.get(`/api/records?patientId=${p.id}`).expect(200);
+    expect(records.body.records.find((r:any)=>r.id===record.id).facility_name).toBe(updated.body.name);
+    await officer.get(`/api/staff/dashboard?facility=${f.id}`).expect(200);
+    const event=(await db.query("SELECT detail FROM audit_events WHERE target_id=$1 AND action='facility.update'",[f.id])).rows[0];
+    expect(event.detail.before.name).toBe(f.name);expect(event.detail.after.name).toBe(updated.body.name);
+  });
+  it.each([
+    ['Assigned users (including disabled accounts)',"INSERT INTO users(name,email,password_hash,role,facility_id,disabled) VALUES('Disabled',gen_random_uuid()::text || '@test.local','unused','patient',$1,true)",false],
+    ['Queue stations',"INSERT INTO queues(facility_id,name) VALUES($1,'Station')",false],
+    ['Daily sessions',"INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,current_date,gen_random_uuid()::text)",false],
+    ['Activities',"INSERT INTO activities(facility_id,queue_id,title,venue,activity_date,booking_opens,booking_closes,created_by) VALUES($1,$2,'Activity','Venue',current_date,now(),now()+interval '1 day',$3)",true],
+    ['Clinical records',"INSERT INTO clinical_records(facility_id,patient_id,author_id,summary) VALUES($1,$2,$3,'Note')",true],
+    ['Sharing authorizations',"INSERT INTO sharing_grants(destination_id,patient_id,requested_by,record_ids,consent_note) VALUES($1,$2,$3,'{}','Verified consent')",true],
+    ['Directory information',"INSERT INTO information(facility_id,kind,title,content) VALUES($1,'faq','Title','Content')",false],
+    ['Baseline metrics',"INSERT INTO baseline_metrics(facility_id,day,waiting_minutes,service_minutes,volume,source) VALUES($1,current_date,1,1,1,'Test')",false],
+  ])('blocks Health Unit deletion for %s',async(label,sql,multi)=>{
+    const unit=await newUnit(),uid=(await systemAdmin.get('/api/auth/me')).body.user.id;
+    // Supply only parameters referenced by the fixture statement.
+    const params=multi?[unit.id,label==='Activities'?q.id:p.id,uid]:[unit.id];
+    await db.query(sql,params);
+    const listed=(await systemAdmin.get('/api/admin/facilities').expect(200)).body.find((u:any)=>u.id===unit.id);
+    expect(listed.canDelete).toBe(false);expect(listed.deletionBlockers).toContainEqual({label,count:1});
+    if(label.startsWith('Assigned'))expect(listed.assignedUserCount).toBe(1);
+    const result=await mutate(systemAdmin,'delete',`/admin/facilities/${unit.id}`).expect(409);expect(result.body.error).toContain(label);
+    expect((await db.query('SELECT id FROM facilities WHERE id=$1',[unit.id])).rowCount).toBe(1);
+  });
+  it('preserves facility-admin announcement permissions and audits the updated information',async()=>{
+    await mutate(admin,'put',`/facilities/${f.id}/announcement`,{announcement:'Local update'}).expect(200);
+    expect((await db.query('SELECT announcement FROM facilities WHERE id=$1',[f.id])).rows[0].announcement).toBe('Local update');
+    const event=(await db.query("SELECT detail FROM audit_events WHERE target_id=$1 AND action='announcement.update'",[f.id])).rows[0];
+    expect(event.detail.before.announcement).toBe('');expect(event.detail.after.announcement).toBe('Local update');
+    const other=await newUnit();
+    await mutate(admin,'put',`/facilities/${other.id}/announcement`,{announcement:'Forbidden'}).expect(403);
+    await mutate(officer,'put',`/facilities/${f.id}/announcement`,{announcement:'Forbidden'}).expect(403);
+  });
+  it('deletes unused units and retains audit snapshots without dangling facility references',async()=>{
+    const unit=await newUnit();
+    await mutate(systemAdmin,'put',`/admin/facilities/${unit.id}`,{...unit,name:'Renamed '+randomUUID()}).expect(200);
+    await mutate(systemAdmin,'delete',`/admin/facilities/${unit.id}`).expect(200);
+    expect((await db.query('SELECT id FROM facilities WHERE id=$1',[unit.id])).rowCount).toBe(0);
+    const events=(await db.query('SELECT * FROM audit_events WHERE target_id=$1 ORDER BY created_at',[unit.id])).rows;
+    expect(events.map(e=>e.action)).toEqual(['facility.create','facility.update','facility.delete']);
+    expect(events.every(e=>e.facility_id===null)).toBe(true);
+    expect(events[0].detail.after.name).toBe(unit.name);
+    expect(events[0].detail.deletedFacilityId).toBe(unit.id);
+    expect(events[2].detail.before.id).toBe(unit.id);expect(events[2].detail.after).toBeNull();
+  });
+  it('rechecks deletion after a concurrent reference transaction commits',async()=>{
+    const unit=await newUnit(),client=await db.connect();let deletion:Promise<any>|undefined;
+    try{
+      await client.query('BEGIN');await client.query("INSERT INTO queues(facility_id,name) VALUES($1,'Concurrent station')",[unit.id]);
+      deletion=mutate(systemAdmin,'delete',`/admin/facilities/${unit.id}`).then((r:any)=>r);
+      let waiting=false;
+      for(let i=0;i<100;i++){
+        const locks=await db.query("SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query='SELECT * FROM facilities WHERE id=$1 FOR UPDATE'");
+        if(locks.rowCount){waiting=true;break;}await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(waiting).toBe(true);await client.query('COMMIT');
+      expect((await deletion).status).toBe(409);
+      expect((await db.query('SELECT id FROM facilities WHERE id=$1',[unit.id])).rowCount).toBe(1);
+    }finally{await client.query('ROLLBACK');client.release();if(deletion)await deletion;}
   });
   it('keeps QR registrations pending until staff confirms physical arrival',async()=>{
     const joined=await post(patient,`/join/${s.token}`,{queueId:q.id,consent:true}).expect(200);expect(joined.body.tracking_token).toHaveLength(48);

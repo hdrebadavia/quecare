@@ -3,7 +3,7 @@
 **A practical guide for patients, guests, Queue Officers, healthcare providers, facility administrators, and CHO administrators**  
 Version 1.0 · Prepared 30 October 2026 · Applies to application version 0.1.0
 
-QueCare helps organize patient visits at Meycauayan City Health Units **2, 4, 5, 6, 7, 9, and 10**. Use this manual to follow a complete task, from its starting requirements to the result you should see. Button and menu names in **bold** match the application.
+QueCare helps organize patient visits at configurable Health Units. The initial demo/bootstrap defaults are Meycauayan City Health Units **2, 4, 5, 6, 7, 9, and 10**. Use this manual to follow a complete task, from its starting requirements to the result you should see. Button and menu names in **bold** match the application.
 
 This manual describes the current local evaluation build. Training must use fictional patient information. Actual facility schedules, published services, privacy notices, and deployment arrangements must be finalized by the institution before routine patient use.
 
@@ -28,10 +28,10 @@ This manual describes the current local evaluation build. Training must use fict
 | --- | --- | --- |
 | Guest patient | Read published information, register through the daily QR, follow a private queue link | No account needed for queue registration. Ask staff for appointments and record sharing. |
 | Registered patient | Book appointments, join the queue, view own records, request or revoke record sharing | Access is limited to the patient's own bookings and records. |
-| Queue Officer | Verify arrivals, issue numbers, operate assigned queues, assist with bookings, link verified guest profiles to accounts | Assigned RHU and queues; no clinical-note access. |
-| Healthcare provider / nurse | Operate assigned queues, document visits, attach files, read authorized records, verify sharing consent | Clinical records at their RHU and specifically authorized records from other RHUs. |
-| Facility administrator | Manage daily sessions, queues, staff access, monitor, announcements, directory submissions, activities, and reports | Assigned RHU; cannot appoint or change administrator access or read clinical notes. |
-| CHO / system administrator | Oversee all participating RHUs, appoint facility administrators, approve directory information, review operations | Can switch RHUs; administrator status does not grant clinical-note access. |
+| Queue Officer | Verify arrivals, issue numbers, operate assigned queues, assist with bookings, link verified guest profiles to accounts | Assigned Health Unit and queues; no clinical-note access. |
+| Healthcare provider / nurse | Operate assigned queues, document visits, attach files, read authorized records, verify sharing consent | Clinical records at their Health Unit and specifically authorized records from other Health Units. |
+| Facility administrator | Manage daily sessions, queues, staff access, monitor, announcements, directory submissions, activities, and reports | Assigned Health Unit; cannot appoint or change administrator access or read clinical notes. |
+| CHO / system administrator | Oversee all participating Health Units, appoint facility administrators, approve directory information, review operations | Can switch Health Units; administrator status does not grant clinical-note access. |
 
 Queue Officers and providers can create and manage activities only when an administrator grants the activity-management permission. They can assist with individual bookings without that extra permission.
 
@@ -39,16 +39,16 @@ Queue Officers and providers can create and manage activities only when an admin
 
 ## 2. Getting started and shared tasks
 
-### G1. Open QueCare and select an RHU
+### G1. Open QueCare and select an Health Unit
 
 **Before you start:** obtain the QueCare address from your facility. For a running local demonstration, use `http://localhost:5173`.
 
 1. Open the address in your browser.
 2. Check **YOUR HEALTH FACILITY** at the top of the page.
-3. If available, use **Health facility** to select the RHU you intend to visit or manage.
+3. If available, use **Health Unit** to select the Health Unit you intend to visit or manage.
 4. On a small screen, use **Open navigation** to access the menus.
 
-**Expected result:** information and activities load for the selected RHU. Facility staff are restricted to their assigned RHU; CHO administrators can switch between facilities. QR registration and tracking links select their associated RHU automatically.
+**Expected result:** information and activities load for the selected Health Unit. Facility staff are restricted to their assigned Health Unit; CHO administrators can switch between facilities. QR registration and tracking links select their associated Health Unit automatically.
 
 ### G2. Sign in and sign out
 
@@ -70,9 +70,9 @@ Queue Officers and providers can create and manage activities only when an admin
 
 ### G4. Find service information and announcements
 
-1. Select the correct RHU, then open **Service directory**.
+1. Select the correct Health Unit, then open **Service directory**.
 2. Read the service description, requirements, source, and update date.
-3. Use the **Facility announcements** bell to read the RHU's current announcement.
+3. Use the **Facility announcements** bell to read the Health Unit's current announcement.
 
 **Expected result:** only approved directory entries appear publicly. A third-party cost reference is an approximate range with a source, not a quotation for your treatment.
 
@@ -83,15 +83,15 @@ Queue Officers and providers can create and manage activities only when an admin
 3. Select **Send question** and review the answer.
 4. Expand **Information sources**, when available, to check the source and update date.
 
-**Expected result:** an approved-directory answer or a labeled AI summary appears. If no approved information is available, ask the RHU team. Do not enter patient names, clinical notes, or other personal information; the assistant provides information support and cannot provide medical advice.
+**Expected result:** an approved-directory answer or a labeled AI summary appears. If no approved information is available, ask the Health Unit team. Do not enter patient names, clinical notes, or other personal information; the assistant provides information support and cannot provide medical advice.
 
 ## 3. Guest patients and representatives
 
 ### V1. Register through the daily QR without an account
 
-**Before you start:** be at the correct RHU and obtain today's QR from staff. The daily session and your entry station must be open.
+**Before you start:** be at the correct Health Unit and obtain today's QR from staff. The daily session and your entry station must be open.
 
-1. Scan the QR and check the displayed RHU and registration date.
+1. Scan the QR and check the displayed Health Unit and registration date.
 2. Select **Continue as a guest**.
 3. Enter the patient's full name and date of birth. Add barangay and optional mobile number as appropriate.
 4. Enter a **Guardian / representative** for a patient under 18, or where applicable.
@@ -128,7 +128,7 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 
 1. For an appointment, ask staff to reserve a published activity timeslot against your existing patient profile.
 2. Keep the booking reference and arrival details staff provides.
-3. For record sharing, ask a healthcare provider to review the specific records and destination RHU with you.
+3. For record sharing, ask a healthcare provider to review the specific records and destination Health Unit with you.
 4. Complete identity and consent verification with the provider or appropriate representative.
 
 **Expected result:** staff can assist with appointments and providers can record verified sharing consent without a patient login. A guardian name is a registration field; this build does not provide a separate guardian account with a dependent-management dashboard.
@@ -143,11 +143,11 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 4. Enter an email address and a password of 10–128 characters.
 5. Select **Create account**.
 
-**Expected result:** you are signed in as a patient. The account works across the seven participating RHUs. If you already have a guest care history, ask the front desk to link the verified profile before creating new visits or bookings on the new account; see Q7.
+**Expected result:** you are signed in as a patient. The account works across all participating Health Units. If you already have a guest care history, ask the front desk to link the verified profile before creating new visits or bookings on the new account; see Q7.
 
 ### P2. Join today's queue using your account
 
-1. Scan the RHU's daily QR.
+1. Scan the Health Unit's daily QR.
 2. Select **Sign in or create an account** if you are not signed in.
 3. Check the patient name displayed on the registration form.
 4. Authorize registration for today's visit and choose the entry station.
@@ -160,7 +160,7 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 
 **Before you start:** sign in with a patient account. The activity must be published, its booking period open, and a slot available.
 
-1. Select the intended RHU and open **Activities & booking** or **Find an activity**.
+1. Select the intended Health Unit and open **Activities & booking** or **Find an activity**.
 2. Review the activity date and venue, then select **Choose a timeslot**.
 3. Read the requirements and select an available timeslot.
 4. Select **Confirm booking**.
@@ -176,13 +176,13 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 3. To cancel, select **Cancel**, check the confirmation box, and select **Cancel appointment**.
 4. Check the updated time or canceled status in the list.
 
-**Expected result:** rescheduling moves the reservation and cancellation releases the place. Rescheduling requires the activity's booking period to remain open. Patients must cancel before the slot starts; contact the RHU if it has already started. Checked-in bookings cannot be changed through these controls.
+**Expected result:** rescheduling moves the reservation and cancellation releases the place. Rescheduling requires the activity's booking period to remain open. Patients must cancel before the slot starts; contact the Health Unit if it has already started. Checked-in bookings cannot be changed through these controls.
 
 ### P5. Read your visit records and attachments
 
 1. Open **Patient records**.
 2. Review the visit history and documented summaries.
-3. Check the RHU, date, and documenting provider to identify the correct note.
+3. Check the Health Unit, date, and documenting provider to identify the correct note.
 4. Select an attachment's filename to download it, if present.
 
 **Expected result:** your own recorded summaries and attachments appear. An empty record list may mean a provider has not yet documented the visit. Ask the provider about missing information or corrections.
@@ -190,11 +190,11 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 ### P6. Request sharing of selected records
 
 1. In **Patient records**, select **Share selected records**.
-2. Choose the **Destination RHU**.
-3. Tick only the records you want that RHU to receive.
+2. Choose the **Destination Health Unit**.
+3. Tick only the records you want that Health Unit to receive.
 4. Enter the consent/request details and confirm authorization for those selected records.
 5. Select **Request record sharing**.
-6. Contact a provider at the destination RHU for identity and consent verification.
+6. Contact a provider at the destination Health Unit for identity and consent verification.
 
 **Expected result:** the authorization first appears as **pending**. After destination-provider approval, destination providers can access the selected notes and their attachments. Unselected notes remain outside that authorization; a later note requires a separate selection and authorization.
 
@@ -208,7 +208,7 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 
 ## 5. Queue Officers
 
-**Start of shift:** sign in, check your RHU, open **Live queues**, and confirm the daily session is open and your queues are assigned. Ask an administrator to open the session or correct access when necessary.
+**Start of shift:** sign in, check your Health Unit, open **Live queues**, and confirm the daily session is open and your queues are assigned. Ask an administrator to open the session or correct access when necessary.
 
 ### Q1. Confirm a QR registration and issue a number
 
@@ -250,10 +250,10 @@ Keep the tracking link private. Public monitors show numbers, while the tracking
 | Called patient has not approached | Select **Recall** and announce the number again. | The same number remains called; announce it yourself. |
 | Called patient is absent | Select **Skip** before starting service. | The number appears under **Skipped numbers**, allowing the next call. |
 | Skipped patient returns | Find them under **Skipped numbers**, then select **Return to line**. | They rejoin with a new station-entry time within their priority group. |
-| Another station is required | During service select **Transfer to another queue**, or select **Transfer** after station completion. Choose an open destination at the same RHU and select **Transfer patient**. | The number is retained and joins the destination line within its priority group. |
+| Another station is required | During service select **Transfer to another queue**, or select **Transfer** after station completion. Choose an open destination at the same Health Unit and select **Transfer patient**. | The number is retained and joins the destination line within its priority group. |
 | Visit must end without completion | Use **Cancel** in the waiting list or **Cancel visit** for the current patient. Enter a reason and submit **Cancel visit**. | The visit becomes canceled and leaves the active line. |
 
-A service that has already started cannot be skipped. Complete, transfer, or cancel it as appropriate. Queue transfer is within one RHU; cross-RHU record sharing is a separate task.
+A service that has already started cannot be skipped. Complete, transfer, or cancel it as appropriate. Queue transfer is within one Health Unit; cross-Health Unit record sharing is a separate task.
 
 ### Q5. Help with an appointment
 
@@ -299,25 +299,25 @@ Providers may use Q1–Q6 for assigned queues and appointment assistance. Clinic
 1. Open **Patient records**.
 2. Use **Find an existing patient**, enter the name, select **Search**, and choose the verified patient from **Select patient**.
 3. Review the patient header before opening notes or attachments.
-4. Read local RHU notes and any specifically authorized notes from other RHUs.
+4. Read local Health Unit notes and any specifically authorized notes from other Health Units.
 
-**Expected result:** authorized summaries and visit history appear. Missing external notes require selected-record authorization; a visit at your RHU does not automatically unlock all external records.
+**Expected result:** authorized summaries and visit history appear. Missing external notes require selected-record authorization; a visit at your Health Unit does not automatically unlock all external records.
 
 ### H2. Document a visit and attach supporting files
 
-**Before you start:** the patient must have a visit recorded at your RHU. The current form associates the new summary with the latest recorded visit at your RHU, so verify the visit history before saving.
+**Before you start:** the patient must have a visit recorded at your Health Unit. The current form associates the new summary with the latest recorded visit at your Health Unit, so verify the visit history before saving.
 
 1. Find the patient using H1, then select **Document visit**.
 2. Enter the **Visit summary**, **Allergies**, and **Clinical flags** as appropriate.
 3. Select **Save visit summary** and review the saved note.
-4. On a note belonging to your RHU, select **Attach PDF or image** and choose a PDF, PNG, or JPEG file up to 5 MB.
+4. On a note belonging to your Health Unit, select **Attach PDF or image** and choose a PDF, PNG, or JPEG file up to 5 MB.
 5. Confirm the attachment appears under the correct note.
 
-**Expected result:** a new note shows the RHU, author, and creation date; attachments remain private to authorized readers. The interface appends notes and does not offer editing or deleting a saved summary. Follow the institution's correction process if an entry needs correction.
+**Expected result:** a new note shows the Health Unit, author, and creation date; attachments remain private to authorized readers. The interface appends notes and does not offer editing or deleting a saved summary. Follow the institution's correction process if an entry needs correction.
 
-### H3. Approve a patient's sharing request at the destination RHU
+### H3. Approve a patient's sharing request at the destination Health Unit
 
-1. In **Patient records**, review **Record sharing authorizations** for your destination RHU.
+1. In **Patient records**, review **Record sharing authorizations** for your destination Health Unit.
 2. Identify the pending request and verify the patient or representative's identity and consent for the selected records.
 3. Select **Verify consent & approve**, then confirm the verification prompt.
 4. Find the patient and check that the selected external records are now accessible.
@@ -327,7 +327,7 @@ Providers may use Q1–Q6 for assigned queues and appointment assistance. Clinic
 ### H4. Record provider-assisted consent for a guest or patient
 
 1. Find the patient and open **Share selected records**.
-2. Agree the destination RHU and exact records with the patient or verified representative.
+2. Agree the destination Health Unit and exact records with the patient or verified representative.
 3. Select the destination and the records you are authorized to access.
 4. Enter verified consent details or a form reference.
 5. Tick the identity/consent verification statement and select **Record verified sharing consent**.
@@ -336,10 +336,10 @@ Providers may use Q1–Q6 for assigned queues and appointment assistance. Clinic
 
 ### H5. Revoke an authorization as a destination provider
 
-1. Open **Patient records** and locate the authorization addressed to your RHU.
+1. Open **Patient records** and locate the authorization addressed to your Health Unit.
 2. Select **Revoke** and verify the new status.
 
-**Expected result:** that authorization stops granting access. Providers may revoke authorizations addressed to their own RHU; a provider at the originating RHU does not automatically gain revocation access to every outgoing authorization.
+**Expected result:** that authorization stops granting access. Providers may revoke authorizations addressed to their own Health Unit; a provider at the originating Health Unit does not automatically gain revocation access to every outgoing authorization.
 
 ## 7. Facility administrators
 
@@ -347,7 +347,7 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 
 ### F1. Open today's session and display its QR
 
-1. Confirm your assigned RHU.
+1. Confirm your assigned Health Unit.
 2. In **Overview**, select **Open daily session**, or in **Live queues**, select **Open session**.
 3. Select **Show QR code** in Overview or **Daily QR** in Live queues.
 4. Display the QR for patients or use **Copy registration link** to share today's registration URL through the facility's normal process.
@@ -359,9 +359,9 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 
 1. Select **Open live monitor** in **Overview**, or **Monitor** in **Live queues**.
 2. In the new tab, select **Enter fullscreen** if needed.
-3. Check the RHU, station names, numbers, and live/connection status before displaying it to patients.
+3. Check the Health Unit, station names, numbers, and live/connection status before displaying it to patients.
 
-**Expected result:** a numbers-only display shows the current called/serving number, upcoming numbers, averages, and announcement. Opening the monitor requires a CHO administrator or a facility administrator assigned to that RHU. A visible monitor button for another role does not grant access.
+**Expected result:** a numbers-only display shows the current called/serving number, upcoming numbers, averages, and announcement. Opening the monitor requires a CHO administrator or a facility administrator assigned to that Health Unit. A visible monitor button for another role does not grant access.
 
 ### F3. Create, change, pause, or retire a queue
 
@@ -401,7 +401,7 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 3. To add a measured manual-process baseline, select **Baseline observation**. Enter date, average waiting and service minutes, patient count, and measurement source; select **Save baseline**.
 4. Select **Export aggregates** to download the aggregate CSV.
 
-**Expected result:** reports describe the selected RHU and date range. Exports contain aggregate operational data without patient names. Reconstructed arrivals are excluded from timing averages. Survey collection and statistical analysis take place outside QueCare.
+**Expected result:** reports describe the selected Health Unit and date range. Exports contain aggregate operational data without patient names. Reconstructed arrivals are excluded from timing averages. Survey collection and statistical analysis take place outside QueCare.
 
 ### F7. Review recent access and changes
 
@@ -409,11 +409,11 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 2. Review the listed action, staff member, and time.
 3. Escalate unexpected activity using your institution's support process.
 
-**Expected result:** the last 100 events available for your RHU appear. This screen is a recent-event view rather than a complete audit export.
+**Expected result:** the last 100 events available for your Health Unit appear. This screen is a recent-event view rather than a complete audit export.
 
 ### F8. Close the day
 
-1. Check waiting, skipped, called, serving, and station-completed patients across the RHU.
+1. Check waiting, skipped, called, serving, and station-completed patients across the Health Unit.
 2. Resolve care journeys where possible; ensure staff use **Finish visit** for completed visits.
 3. In **Live queues**, select **Close session**.
 4. Read the consequences, tick **I have checked the remaining patients**, and select **Close daily session**.
@@ -422,29 +422,29 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 
 ## 8. CHO or system administrators
 
-### C1. Review and manage a selected RHU
+### C1. Review and manage a selected Health Unit
 
 1. Sign in with the CHO administrator account; the top bar labels this role **System administrator**.
-2. Choose an RHU using **Health facility**.
-3. Review **Overview**, **Live queues**, **Reports & insights**, and **Administration** for that RHU.
+2. Choose an Health Unit using **Health Unit**.
+3. Review **Overview**, **Live queues**, **Reports & insights**, and **Administration** for that Health Unit.
 4. Use F1–F8 for sessions, station setup, monitoring, staff access, announcements, and reporting.
-5. Check the RHU selector again before saving a change or export.
+5. Check the Health Unit selector again before saving a change or export.
 
-**Expected result:** CHO can oversee each participating RHU. Reports are reviewed/exported for the selected facility; this manual does not assume a combined all-RHU dashboard.
+**Expected result:** CHO can oversee each participating Health Unit. Reports are reviewed/exported for the selected facility; this manual does not assume a combined all-Health Unit dashboard.
 
 ### C2. Appoint a facility administrator
 
-1. Select the intended RHU.
+1. Select the intended Health Unit.
 2. Open **Administration → Staff & permissions → Add staff member**.
 3. Enter name, email, and initial password, then select **Facility Administrator** as the role.
 4. Review the access configuration and select **Save staff access**.
 5. Use **Permissions** to update or disable that account later when necessary.
 
-**Expected result:** the new administrator is associated with the chosen RHU. Only the system administrator can create facility-administrator accounts or modify administrator access; you cannot modify your own access through this screen.
+**Expected result:** the new administrator is associated with the chosen Health Unit. Only the system administrator can create facility-administrator accounts or modify administrator access; you cannot modify your own access through this screen.
 
 ### C3. Approve or withdraw public directory information
 
-1. Select the relevant RHU and open **Service directory → Review content**.
+1. Select the relevant Health Unit and open **Service directory → Review content**.
 2. Review each entry's wording, requirements, source, and date. For cost references, verify the range and supporting source.
 3. Select **Approve & publish** when ready.
 4. Check **Public directory** to verify publication.
@@ -454,7 +454,7 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 
 ## 9. Activity management for authorized staff
 
-**Who can use this section:** CHO administrators, facility administrators, and Queue Officers/providers with the activity-management permission. A manager operates within their permitted RHU.
+**Who can use this section:** CHO administrators, facility administrators, and Queue Officers/providers with the activity-management permission. A manager operates within their permitted Health Unit.
 
 ### A1. Create and publish an activity
 
@@ -474,7 +474,7 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 2. Update the permitted details and select **Save activity**.
 3. Verify the saved slots and availability.
 
-**Expected result:** valid changes are saved. Activities with confirmed or checked-in reservations must keep their date, entry queue, and published status. Reserved slots cannot be moved or removed, and capacity cannot fall below confirmed/checked-in reservations. Slots with booking history cannot be removed even after cancellation. If the plan must change substantially, coordinate cancellation and replacement with the RHU team.
+**Expected result:** valid changes are saved. Activities with confirmed or checked-in reservations must keep their date, entry queue, and published status. Reserved slots cannot be moved or removed, and capacity cannot fall below confirmed/checked-in reservations. Slots with booking history cannot be removed even after cancellation. If the plan must change substantially, coordinate cancellation and replacement with the Health Unit team.
 
 ### A3. Review the roster and cancel an activity
 
@@ -512,26 +512,26 @@ All queue hours, appointment slots, and original-arrival entry times use **Asia/
 
 | Problem | What to do |
 | --- | --- |
-| Today's QR does not open or is expired | Check the RHU/date with the front desk. An administrator must open the current daily session and display its QR. |
+| Today's QR does not open or is expired | Check the Health Unit/date with the front desk. An administrator must open the current daily session and display its QR. |
 | Registration says pending and no number appears | Go to the front desk for identity and on-site arrival confirmation. Avoid submitting another profile. |
 | Lost tracking link | Try **My care hub → Follow your number** on the same browser. Otherwise ask the front desk for help locating today's visit. |
 | Another person's ticket opens on a shared device | The browser may have saved their last tracking reference. Use your own private link and keep links separate. |
 | Session is closed | Ask the administrator about today's operating status. A session deliberately closed today cannot be reopened today. |
-| No assigned queues / permission denied | Confirm the account and RHU. Ask the administrator to check queue assignment or activity-management permission. |
+| No assigned queues / permission denied | Confirm the account and Health Unit. Ask the administrator to check queue assignment or activity-management permission. |
 | Outside-hours or priority reason required | Authorized staff should verify the situation and enter a reason in the issuance/check-in form. |
 | Cannot call the next patient | Check session and queue status, waiting count, connection, and whether a number is already called or serving. |
-| Transfer destination missing | The destination must be a different open queue in the same RHU. Ask an administrator to check its status. |
+| Transfer destination missing | The destination must be a different open queue in the same Health Unit. Ask an administrator to check its status. |
 | Slot full or booking not open | Refresh availability, choose another slot, or ask staff about booking dates. A published card alone does not guarantee booking is currently open. |
 | Cannot check in an appointment | Confirm the slot has started, today's session is open, the entry queue is open and assigned, and any late/outside-hours reason is provided. Use the existing visit if the patient already has a number today. |
 | Confirmation email missing | Check the booking status/reference in **Appointments** before trying again. A confirmed booking remains valid if email delivery fails. |
 | Reset email missing | Check the email address and available delivery channel with the operator. Request a fresh link if needed. |
-| External records missing | Check exact record selection, destination RHU, and approved authorization status. Ask the destination provider to verify consent if pending. |
-| File upload rejected | Use a genuine PDF, PNG, or JPEG up to 5 MB on a note from your RHU. |
+| External records missing | Check exact record selection, destination Health Unit, and approved authorization status. Ask the destination provider to verify consent if pending. |
+| File upload rejected | Use a genuine PDF, PNG, or JPEG up to 5 MB on a note from your Health Unit. |
 | Account linking refused | Check name/date-of-birth match and existing care history. Escalate for review rather than creating more duplicate profiles. |
 | Connection or session security error | Keep track of unsaved work, restore connectivity, refresh, and sign in again if necessary. Verify the latest state before retrying an action. |
-| Outage during operations | Follow the RHU's paper-registration process and staff announcements. After reconnection use Q6 for eligible same-day arrivals. Cached displays do not provide offline operation. |
+| Outage during operations | Follow the Health Unit's paper-registration process and staff announcements. After reconnection use Q6 for eligible same-day arrivals. Cached displays do not provide offline operation. |
 
-For help, patients should contact the RHU front desk; staff should contact their facility administrator; administrators should use the institution's designated system support contact. Provide the RHU, time, screen, error message, and relevant queue/booking reference through an approved private channel. Never send a password or include unnecessary patient details in a general support message.
+For help, patients should contact the Health Unit front desk; staff should contact their facility administrator; administrators should use the institution's designated system support contact. Provide the Health Unit, time, screen, error message, and relevant queue/booking reference through an approved private channel. Never send a password or include unnecessary patient details in a general support message.
 
 ## 12. Practice walkthroughs
 
@@ -546,7 +546,7 @@ Use fictional people and a demonstration environment. These examples combine the
 5. **Assigned staff/provider:** transfer if needed, then complete the last station and finish the visit (Q3–Q4).
 6. **Guest:** check the tracking page (V3).
 
-**Successful outcome:** one number follows the guest through the RHU and the final visit status is completed.
+**Successful outcome:** one number follows the guest through the Health Unit and the final visit status is completed.
 
 ### Scenario 2: Patient with an appointment
 
@@ -558,18 +558,18 @@ Use fictional people and a demonstration environment. These examples combine the
 
 **Successful outcome:** the booking is checked in and linked to the patient's visit; no separate walk-in visit was created first.
 
-### Scenario 3: Selected records needed at another RHU
+### Scenario 3: Selected records needed at another Health Unit
 
-1. **Provider at RHU 2:** document a fictional patient's visit (H2).
-2. **Patient:** select that record and request sharing to RHU 4 (P6).
-3. **Provider at RHU 4:** verify identity and consent, approve, then find the patient (H3).
+1. **Provider at Health Unit 2:** document a fictional patient's visit (H2).
+2. **Patient:** select that record and request sharing to Health Unit 4 (P6).
+3. **Provider at Health Unit 4:** verify identity and consent, approve, then find the patient (H3).
 4. **Patient:** revoke the authorization when appropriate (P7).
 
-**Successful outcome:** RHU 4 gains access to the selected note and attachments after approval. That grant stops providing access after revocation; unrelated notes remain outside it.
+**Successful outcome:** Health Unit 4 gains access to the selected note and attachments after approval. That grant stops providing access after revocation; unrelated notes remain outside it.
 
 ### Scenario 4: New staff member and published service information
 
-1. **CHO administrator:** appoint the facility administrator for the selected RHU if needed (C2).
+1. **CHO administrator:** appoint the facility administrator for the selected Health Unit if needed (C2).
 2. **Facility administrator:** create a Queue Officer account and assign its entry queue (F4).
 3. **Queue Officer:** sign in and verify the assigned queue is available (Q3).
 4. **Facility administrator:** submit fictional service information (F5).
@@ -581,3 +581,19 @@ Use fictional people and a demonstration environment. These examples combine the
 ---
 
 **Document maintenance:** update this manual whenever screen labels, permissions, or workflows change. It was checked against the current interface and server rules; it does not replace the institution's operating, identity-verification, consent, or record-correction procedures. Technical setup is covered in the [project README](../README.md), with additional scope details in the [system description](system-description.md) and [implementation notes](implementation.md).
+
+### C4. Add, edit, or delete Health Units
+
+**Who can use this:** CHO/system administrators only.
+
+1. Open **Administration → Health Units** to see all units, assigned-user counts, and deletion eligibility.
+2. Select **Add Health Unit**, enter a unique name (up to 200 characters), address (up to 1,000 characters), and optional announcement (up to 500 characters), then select **Create Health Unit**.
+3. Select the new unit in **Health Unit** and use Administration to configure queue stations and staff before opening a daily session.
+4. To edit, select **Edit**, change the fields, then select **Review changes**. Read the before/after values and warning, check the acknowledgment, and select **Confirm and save changes**. **Back to editing** or closing the dialog leaves the saved unit unchanged. Renaming preserves assignments and records; historical displays use the new name.
+5. To delete an unused unit, select **Delete**, verify its name, acknowledge permanent deletion, and select **Delete Health Unit permanently**. Closing the dialog cancels deletion.
+
+**Deletion restrictions:** Any assigned account, including a disabled account, blocks deletion. Queues, daily sessions, activities, clinical records, sharing authorizations, directory information, and baseline metrics also block deletion. Read the reasons beside the disabled Delete control. The server checks again when deletion is submitted. No linked operational or clinical data is removed. Audit history is preserved. Archiving and transferring staff between units are not provided by this workflow.
+
+**Announcements:** Existing announcement controls remain available to authorized facility administrators and system administrators. Confirm the publication prompt to publish the announcement to the unit’s monitor and notification bell.
+
+**If there are no units:** Sign in as a system administrator from the empty screen, then use **Add Health Unit**. Other users see an explanation until a unit becomes available.

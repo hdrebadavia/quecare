@@ -24,7 +24,8 @@
     "verify:deployment": "node scripts/verify-deployment.mjs",
     "preview:cloudflare": "npm run build && CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler dev",
     "deploy:cloudflare": "npm run build && npm run check:worker && wrangler deploy",
-    "check:cloudflare": "npm run check:worker && wrangler deploy --dry-run --outdir .wrangler/dry-run"
+    "check:cloudflare": "npm run check:worker && wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "verify:health-units": "npm run build && tsx scripts/verify-health-units.ts"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

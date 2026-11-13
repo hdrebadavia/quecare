@@ -1,6 +1,6 @@
 # QueCare
 
-A locally runnable patient service application for Meycauayan City Health Units **2, 4, 5, 6, 7, 9, and 10**. Includes queueing, activity-based appointments, basic clinical visit records, selected-record sharing, and an informational assistant.
+A locally runnable patient service application with configurable Health Units. Bootstrap and demo defaults include Meycauayan City Health Units **2, 4, 5, 6, 7, 9, and 10**. Includes queueing, activity-based appointments, basic clinical visit records, selected-record sharing, and an informational assistant.
 
 ## Start locally
 
@@ -24,14 +24,14 @@ The app starts in the public patient workspace. Click **Sign in / Register**, th
 | Nurse/provider | nurse@quecare.local | QueCareDemo2026! |
 | Patient | patient@quecare.local | QueCareDemo2026! |
 
-All sample people, schedules, and notes are fictional. The initial daily session and queue data are seeded at RHU 2. Other RHUs have configurable queues and no fictional visits. Run `db:seed` again on a later day to create that day's RHU 2 demo session. Do not use demo accounts or this local trust-authenticated database in production.
+All sample people, schedules, and notes are fictional. The initial daily session and queue data are seeded at Health Unit 2. Other Health Units have configurable queues and no fictional visits. Run `db:seed` again on a later day to create that day's Health Unit 2 demo session. Do not use demo accounts or this local trust-authenticated database in production.
 
 ## Workflows
 
 - **Queue:** an administrator opens the daily session and displays its QR. Unclosed prior-day sessions automatically expire when today's session is opened. QR registration creates a pending arrival. Staff verifies presence, issues the number, calls, starts service, completes the station, transfers, and separately finishes the visit. Guests need no account. No-phone patients can receive a handwritten number.
 - **Monitor:** administrators open the fullscreen display from Overview or Live queues. Public snapshots and patient screens contain numbers only. Each queue has one serving patient; multiple queues operate together.
-- **Appointments:** authorized staff create RHU-owned activities, venues, and capacity-controlled slots. Patients with accounts book online; staff can reserve for existing patient profiles. Staff arrival confirmation converts appointments to live entries. Late check-in needs a reason; early check-in is rejected.
-- **Records:** providers document a visit at their RHU. Administrators and Queue Officers cannot read clinical notes. Patients select individual records for sharing; destination providers verify consent before access. Guests can use provider-assisted verified consent. Sharing includes only the selected notes and their attachments and can be revoked.
+- **Appointments:** authorized staff create Health Unit-owned activities, venues, and capacity-controlled slots. Patients with accounts book online; staff can reserve for existing patient profiles. Staff arrival confirmation converts appointments to live entries. Late check-in needs a reason; early check-in is rejected.
+- **Records:** providers document a visit at their Health Unit. Administrators and Queue Officers cannot read clinical notes. Patients select individual records for sharing; destination providers verify consent before access. Guests can use provider-assisted verified consent. Sharing includes only the selected notes and their attachments and can be revoked.
 - **Account linking:** Queue Officers/admins can link a verified guest profile to a matching, otherwise unused patient account through the registration dialog. Identity and account ownership must be verified in person. Automatic merging of profiles with existing care history is intentionally refused.
 - **Directory and assistant:** facility admins submit service/FAQ/cost entries; CHO approves publication. Cost references require a range and source. The assistant returns matched approved information locally and can optionally summarize non-cost content through Groq. No fabricated healthcare price list is included.
 - **Research:** baseline observations, per-station waiting/service metrics, daily outcomes, appointment counts, and aggregate CSV exports. Timing calculations exclude reconstructed outage registrations. Surveys and statistical analysis remain external.
@@ -56,11 +56,11 @@ The local app works without provider accounts. All keys belong in `.env` or host
 | Groq | Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and optionally `GROQ_MODEL`. With no key, on limits, or on timeout, approved directory answers remain available. |
 | Hosting | `npm ci`, `npm run build`, `npm run db:migrate`, then `npm start`. Set `NODE_ENV=production`, `APP_URL` to the canonical HTTPS origin, and `PORT` as supplied by the host. Frontend and backend share the same origin. |
 
-For an empty production database, set `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_PASSWORD` (12+ characters) in the private provisioning environment, then run `npm run db:bootstrap`. This creates the seven RHUs and a CHO administrator without demo data. Remove the provisioning password afterward and configure queues through Administration.
+For an empty production database, set `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_PASSWORD` (12+ characters) in the private provisioning environment, then run `npm run db:bootstrap`. This creates the seven Health Units and a CHO administrator without demo data. Remove the provisioning password afterward and configure queues through Administration.
 
 Authentication is currently provided by this application's backend. Connecting Supabase as the database/storage provider does **not** require Supabase Auth. Replacing the auth implementation is a separate future migration, not an environment switch.
 
-Free Render hosting can demonstrate the app but sleeps when idle. Use an always-on backend and tested backups before routine RHU operations. Local uploaded files are unsuitable for ephemeral hosts; configure private external storage. Booking email failures do not roll back confirmed reservations; staff can follow up using the roster. Reset-email failures report a service error.
+Free Render hosting can demonstrate the app but sleeps when idle. Use an always-on backend and tested backups before routine Health Unit operations. Local uploaded files are unsuitable for ephemeral hosts; configure private external storage. Booking email failures do not roll back confirmed reservations; staff can follow up using the roster. Reset-email failures report a service error.
 
 ## Verification
 
@@ -88,4 +88,12 @@ See [the deployment plan and runbook](docs/deployment.md) for Cloudflare Workers
 - [Revised system description](docs/system-description.md)
 - [Implementation decisions and remaining deployment work](docs/implementation.md)
 
-This release is for local evaluation with fictional data. Institutional consent text, actual RHU schedules/service information, external-provider configuration, backup/restore procedures, and production security/privacy review must be finalized before real patient use. It does not claim comprehensive legal or healthcare regulatory compliance.
+This release is for local evaluation with fictional data. Institutional consent text, actual Health Unit schedules/service information, external-provider configuration, backup/restore procedures, and production security/privacy review must be finalized before real patient use. It does not claim comprehensive legal or healthcare regulatory compliance.
+
+### Managing Health Units
+
+CHO/system administrators can open **Administration → Health Units** to add units or edit their name, address, and announcement. New units have no staff, queues, or sessions; configure staff and stations through Administration. Edits require reviewing the before/after values and acknowledging that linked users and records retain their unit IDs, while historical displays use the new name. Announcement publishing also requires confirmation.
+
+Only unused units can be permanently deleted. Any assigned user (including disabled accounts), queue, session, activity, clinical record, sharing authorization, directory entry, or baseline metric blocks deletion. The interface lists the blockers, and the server rechecks them transactionally. Audit history is retained after deletion. If no units exist, a system administrator can sign in and create the first one.
+
+Run `npm run verify:health-units` to build and verify management in Chrome using an isolated local PostgreSQL schema. It defaults to `postgresql://127.0.0.1:55432/quecare`; override with `TEST_DATABASE_URL` for a dedicated test database and `CHROME_PATH` for another Chrome executable. The schema is removed afterward.
