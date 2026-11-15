@@ -1,3 +1,5 @@
+import { profileSchema, createPatient, patientsRouter, geographyRouter } from './patients.js';
+import { displayName, validatePatient } from '../shared/patient.js';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -10,7 +12,7 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 import { pool, one, transaction, dayInManila, type DB } from './db.js';
-import { HttpError, ensure, averageWait, csvCell, isMinor } from './domain.js';
+import { HttpError, ensure, averageWait, csvCell } from './domain.js';
 import { authenticate, requireRole, facilityAccess, queueAccess, audit, createSession, hash, token, isAdmin, type User } from './auth.js';
 import { facilitiesAdmin } from './facilities.js';
 import { issueVisit, queueAction } from './queue.js';
@@ -29,13 +31,7 @@ const admin = (u: User | undefined) => requireRole(u,['system_admin','facility_a
 const activityManager = (u: User | undefined) => { const user = staff(u); ensure(isAdmin(user)||user.can_manage_activities,'Activity management permission is required.',403); return user; };
 const uuid = z.uuid();
 const text = z.string().trim().min(1).max(200);
-const birthSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>!isNaN(Date.parse(v)) && v<=dayInManila(),'Enter a valid birth date.');
-const profileSchema = z.object({name:text,birthDate:birthSchema,barangay:z.string().trim().max(120).default(''),phone:z.string().trim().max(30).default(''),guardianName:z.string().trim().max(200).default(''),consent:z.literal(true)});
 async function patientForUser(db: DB, user: User) { const p = await one(db,'SELECT * FROM patients WHERE user_id=$1',[user.id]); ensure(p,'Patient profile not found.',404); return p; }
-async function createPatient(db: DB, data: z.infer<typeof profileSchema>, userId: string | null = null) {
-  ensure(!isMinor(data.birthDate,dayInManila()) || data.guardianName.trim(),'A guardian name is required for patients under 18.');
-  return one(db,'INSERT INTO patients(user_id,name,birth_date,barangay,phone,guardian_name) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',[userId,data.name,data.birthDate,data.barangay,data.phone,data.guardianName]);
-}
 async function notifyBooking(db: DB, bookingId: string, subject: string) {
   const b = await one(db,'SELECT u.email,a.title,s.starts_at,b.reference FROM bookings b JOIN patients p ON p.id=b.patient_id JOIN users u ON u.id=p.user_id JOIN activities a ON a.id=b.activity_id JOIN activity_slots s ON s.id=b.slot_id WHERE b.id=$1',[bookingId]);
   if(b) { try { await sendEmail(b.email,subject,`${b.title}\n${new Date(b.starts_at).toLocaleString('en-PH',{timeZone:'Asia/Manila'})}\nReference: ${b.reference}\nSign in to QueCare for the current status.`); } catch { console.error('Booking email could not be delivered; booking is preserved.'); } }
@@ -60,7 +56,7 @@ app.post('/api/auth/login',async(req,res)=>{
 app.post('/api/auth/register',async(req,res)=>{
   const input=profileSchema.extend({email:z.email(),password:z.string().min(10).max(128)}).parse(req.body);
   await transaction(async db=>{
-    const user=await one(db,"INSERT INTO users(name,email,password_hash,role) VALUES($1,lower($2),$3,'patient') RETURNING *",[input.name,input.email,await bcrypt.hash(input.password,12)]);
+    const user=await one(db,"INSERT INTO users(name,email,password_hash,role) VALUES($1,lower($2),$3,'patient') RETURNING *",[displayName(validatePatient(input,true)),input.email,await bcrypt.hash(input.password,12)]);
     await createPatient(db,input,user.id); await audit(db,user,'patient.register',user.id); const csrf=await createSession(db,res,user); res.json({csrf});
   });
 });
@@ -133,6 +129,8 @@ app.post('/api/arrivals/:id/check-in',async(req,res)=>{
 });
 app.get('/api/patients/search',async(req,res)=>{const u=staff(req.user);const q=z.string().trim().min(2).max(100).parse(req.query.q);const results=await pool.query('SELECT id,name,birth_date,barangay,phone FROM patients WHERE name ILIKE $1 ORDER BY name LIMIT 15',[`%${q}%`]);await audit(pool,u,'patient.search',null,u.facility_id);res.json(results.rows);});
 app.post('/api/patients',async(req,res)=>{const u=staff(req.user);const data=profileSchema.parse(req.body);const p=await transaction(async db=>{const p=await createPatient(db,data);await audit(db,u,'patient.create',p.id,u.facility_id);return p;});res.json(p);});
+app.use('/api/geography',geographyRouter);
+app.use('/api/patients',patientsRouter);
 app.post('/api/patients/:id/link-account',async(req,res)=>{
   const u=requireRole(req.user,['system_admin','facility_admin','queue_officer']);const pid=uuid.parse(req.params.id),d=z.object({email:z.email(),verificationNote:z.string().trim().min(10).max(500),identityVerified:z.literal(true)}).parse(req.body);
   await transaction(async db=>{
@@ -298,7 +296,7 @@ app.get('/api/admin/audit',async(req,res)=>{const u=admin(req.user),f=uuid.parse
 app.use('/api',(_req,res)=>res.status(404).json({error:'Endpoint not found.'}));
 if(existsSync(resolve('dist/index.html'))){app.use(express.static(resolve('dist')));app.get('/{*path}',(_req,res)=>res.sendFile(resolve('dist/index.html')));}
 app.use((error:any,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{
-  if(error instanceof z.ZodError)return res.status(400).json({error:error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('; ')});
+  if(error instanceof z.ZodError)return res.status(400).json({error:error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('; '),fieldErrors:Object.fromEntries(error.issues.map(i=>[i.path.join('.'),i.message]))});
   if(error instanceof HttpError)return res.status(error.status).json({error:error.message});
   if(error.code==='23505')return res.status(409).json({error:'This record already exists, or another request changed availability. Refresh and try again.'});
   if(['23503','22P02','22007','23514'].includes(error.code))return res.status(400).json({error:'Some values are invalid or this record is still in use.'});

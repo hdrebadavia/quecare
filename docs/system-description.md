@@ -43,7 +43,7 @@ An appointment is an arrival window rather than a promise of an exact service-st
 
 ## Identity, clinical records, and sharing
 
-Patient identity is separate from login identity. Name and birth date support staff duplicate checks; guardian/representative details support assisted registration. Optional contact details and barangay support operations. Guest-to-account linking requires in-person verification, matching identity, and an otherwise unused account profile. Automatic merging of historical records is excluded.
+Patient identity is separate from login identity. Structured names, sex, and birth date support patient identification; guardian/representative details support assisted registration. Optional family, education, employment, household, address, contact, and program membership details are maintained through patient information. Existing full names and free-text barangays are preserved until explicitly updated. Guest-to-account linking requires in-person verification, matching identity, and an otherwise unused account profile. Automatic merging of historical records is excluded.
 
 Providers document basic facility-attributed summaries and clinical flags for existing visits. Attachments are private PDFs, PNGs, or JPEGs up to 5 MB. Patients can request sharing of selected records with a destination RHU; destination providers verify consent before access. Providers can also record patient-verified consent for assisted workflows. Revocation removes future shared access. Unselected notes remain private; attachments follow their note's authorization.
 

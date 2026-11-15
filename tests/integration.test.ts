@@ -3,6 +3,7 @@ import request from 'supertest';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { randomUUID,randomBytes } from 'node:crypto';
+import { applyMigrations } from '../server/migrations';
 import { readFile } from 'node:fs/promises';
 import type { Express } from 'express';
 const suite=process.env.RUN_DB_TESTS==='1'?describe:describe.skip;
@@ -17,7 +18,7 @@ suite('PostgreSQL-backed application workflows',()=>{
   beforeAll(async()=>{
     process.env.NODE_ENV='test';root=new pg.Pool({connectionString:process.env.DATABASE_URL||'postgresql://localhost:55432/quecare'});schema='test_'+randomBytes(6).toString('hex');await root.query(`CREATE SCHEMA ${schema}`);
     const url=new URL(process.env.DATABASE_URL||'postgresql://localhost:55432/quecare');url.searchParams.set('options',`-c search_path=${schema}`);process.env.DATABASE_URL=url.toString();
-    db=(await import('../server/db')).pool;app=(await import('../server/app')).app;await db.query(await readFile(new URL('../server/schema.sql',import.meta.url),'utf8'));
+    db=(await import('../server/db')).pool;app=(await import('../server/app')).app;const migrationClient=await db.connect();try{await applyMigrations(migrationClient);}finally{migrationClient.release();}
   });
   afterAll(async()=>{if(db)await db.end();if(root){if(schema)await root.query(`DROP SCHEMA ${schema} CASCADE`);await root.end();}});
   beforeEach(async()=>{
@@ -168,8 +169,113 @@ suite('PostgreSQL-backed application workflows',()=>{
   it('rejects capacity reductions below existing reservations',async()=>{
     const a=await activity(2);await post(patient,'/bookings',{slotId:a.slot.id});await post(patient2,'/bookings',{slotId:a.slot.id});const record=(await db.query('SELECT * FROM activities WHERE id=$1',[a.id])).rows[0];await provider.put(`/api/activities/${a.id}`).set('X-CSRF-Token',csrf.get(provider)!).send({facilityId:f.id,queueId:q.id,title:record.title,category:record.category,venue:record.venue,activityDate:record.activity_date,bookingOpens:record.booking_opens.toISOString(),bookingCloses:record.booking_closes.toISOString(),status:'published',slots:[{id:a.slot.id,startsAt:a.slot.starts_at.toISOString(),endsAt:a.slot.ends_at.toISOString(),capacity:1}]}).expect(400);
   });
+  const intake={firstName:'Ana',lastName:'Example',middleName:'Reyes',sex:'Female',birthDate:'1990-01-01',consent:true,
+    civilStatus:'Married',maidenName:'Santos',spouseName:'Sam Example',motherName:'Maria Reyes',bloodType:'O+',
+    familyPosition:'Others',familyPositionOther:'Grandmother',educationalAttainment:'College',employmentStatus:'Retired',
+    dswdNhts:false,fourPsMember:true,householdNo:'000123',philhealthMember:true,philhealthStatus:'Dependent',philhealthNo:'001234',philhealthCategory:'IE',pcbMember:true};
+  const patch=(a:any,path:string,body:unknown)=>a.patch('/api'+path).set('X-CSRF-Token',csrf.get(a)!).send(body);
+  it('round-trips structured profiles through staff creation and PATCH without resetting omitted fields',async()=>{
+    const created=await post(officer,'/patients',intake).expect(200);const id=created.body.id;
+    expect(created.body.name).toBe('Ana Reyes Example');
+    for(const a of [officer,admin,provider,systemAdmin]) {
+      const result=await a.get(`/api/patients/${id}`).expect(200);expect(result.body.householdNo).toBe('000123');expect(result.body.philhealthNo).toBe('001234');
+      await patch(a,`/patients/${id}`,{phone:'09123456789'}).expect(200);
+    }
+    const updated=await officer.get(`/api/patients/${id}`).expect(200);expect(updated.body).toMatchObject({civilStatus:'Married',maidenName:'Santos',familyPositionOther:'Grandmother',householdNo:'000123',philhealthNo:'001234'});
+    await patch(officer,`/patients/${id}`,{civilStatus:'Single',fourPsMember:false,philhealthMember:false,familyPosition:'Mother'}).expect(200);
+    const cleared=await officer.get(`/api/patients/${id}`).expect(200);expect(cleared.body).toMatchObject({maidenName:'',spouseName:'',householdNo:'',philhealthNo:'',philhealthStatus:'',philhealthCategory:'',familyPositionOther:''});
+    const auditRows=(await db.query("SELECT detail FROM audit_events WHERE target_id=$1 AND action IN ('patient.read','patient.update')",[id])).rows;
+    expect(JSON.stringify(auditRows)).not.toContain('001234');expect(JSON.stringify(auditRows)).not.toContain('Santos');
+  });
+  it('captures guest intake, permits staff through pending registration, and protects public responses',async()=>{
+    const result=await request(app).post(`/api/join/${s.token}`).send({...intake,queueId:q.id}).expect(200);
+    expect(Object.keys(result.body)).toEqual(['tracking_token']);
+    const row=(await db.query('SELECT p.* FROM patients p JOIN registration_requests r ON r.patient_id=p.id WHERE r.tracking_token=$1',[result.body.tracking_token])).rows[0];
+    expect(row.name).toBe('Ana Reyes Example');expect(row.household_no).toBe('000123');
+    await officer.get(`/api/patients/${row.id}`).expect(200);
+    const tracking=await request(app).get(`/api/tracking/${result.body.tracking_token}`).expect(200);
+    expect(JSON.stringify(tracking.body)).not.toContain('000123');expect(tracking.body).not.toHaveProperty('philhealthNo');
+    const search=await officer.get('/api/patients/search?q=Ana').expect(200);
+    expect(Object.keys(search.body.find((r:any)=>r.id===row.id)).sort()).toEqual(['id','name','birth_date','barangay','phone'].sort());
+    const publicQueue=await request(app).get(`/api/public/queues/${f.id}`).expect(200);expect(JSON.stringify(publicQueue.body)).not.toContain('Ana');
+  });
+  it('registers an account and synchronizes a corrected name without touching other patient data',async()=>{
+    const email=randomUUID()+'@test.local';
+    await request(app).post('/api/auth/register').send({...intake,email,password:'TestPassword123!'}).expect(200);
+    const account=await login(email);const before=await account.get('/api/patients/me').expect(200);
+    const after=await patch(account,'/patients/me',{firstName:'Anita',lastName:'Corrected'}).expect(200);
+    expect(after.body.id).toBe(before.body.id);expect(after.body.name).toBe('Anita Reyes Corrected');expect(after.body.householdNo).toBe('000123');
+    expect((await account.get('/api/auth/me')).body.user.name).toBe('Anita Reyes Corrected');
+    await patch(account,'/patients/me',{philhealthMember:true,philhealthNo:''}).expect(400);
+    await account.patch('/api/patients/me').send({phone:'123'}).expect(403);
+    await request(app).post('/api/auth/register').send({...intake,email:randomUUID()+'@test.local',password:'TestPassword123!',firstName:''}).expect(400);
+  });
+  it('enforces ownership, facility relationships, and allowed PATCH fields',async()=>{
+    const created=await post(officer,'/patients',intake).expect(200);const id=created.body.id;
+    await patient.get(`/api/patients/${id}`).expect(403);await patch(patient,`/patients/${id}`,{phone:'123'}).expect(403);
+    await patient.get(`/api/patients/${p2.id}`).expect(403);
+    await request(app).get(`/api/patients/${id}`).expect(401);
+    await patch(officer,`/patients/${id}`,{userId:randomUUID()}).expect(400);
+    await patch(officer,`/patients/${id}`,{}).expect(400);
+    await officer.get(`/api/patients/${p.id}`).expect(403);await patch(officer,`/patients/${p.id}`,{phone:'123'}).expect(403);
+    await checkin(p.id).then(r=>expect(r.status).toBe(200));await officer.get(`/api/patients/${p.id}`).expect(200);
+    const foreign=await makePatient();await officer.get(`/api/patients/${foreign.id}`).expect(403);await systemAdmin.get(`/api/patients/${foreign.id}`).expect(200);
+    await provider.get(`/api/patients/${id}`).expect(200);
+    expect((await officer.get('/api/records').query({patientId:id})).status).toBe(403);
+  });
+  it('allows a booking relationship and denies staff at another facility',async()=>{
+    const a=await activity();await post(patient2,'/bookings',{slotId:a.slot.id}).expect(200);
+    await officer.get(`/api/patients/${p2.id}`).expect(200);
+    const other=(await db.query("INSERT INTO facilities(name) VALUES($1) RETURNING id",['Other '+randomUUID()])).rows[0];
+    const email=randomUUID()+'@test.local',hash=await bcrypt.hash('TestPassword123!',4);
+    await db.query("INSERT INTO users(name,email,password_hash,role,facility_id) VALUES('Other Officer',$1,$2,'queue_officer',$3)",[email,hash,other.id]);
+    const otherOfficer=await login(email);await otherOfficer.get(`/api/patients/${p2.id}`).expect(403);await patch(otherOfficer,`/patients/${p2.id}`,{phone:'123'}).expect(403);
+  });
+  it('preserves legacy names and barangays during unrelated edits',async()=>{
+    const legacy=await makePatient('Legacy Whole Name');await db.query("UPDATE patients SET barangay='Old free text' WHERE id=$1",[legacy.id]);
+    const updated=await patch(systemAdmin,`/patients/${legacy.id}`,{phone:'000123'}).expect(200);
+    expect(updated.body).toMatchObject({name:'Legacy Whole Name',firstName:'',lastName:'',sex:'',barangay:'Old free text',phone:'000123',dswdNhts:null});
+    await patch(systemAdmin,`/patients/${legacy.id}`,{firstName:'Replacement'}).expect(400);
+    await patch(systemAdmin,`/patients/${legacy.id}`,{firstName:'Replacement',lastName:'Name',sex:'Male'}).expect(200);
+    expect((await db.query('SELECT name FROM patients WHERE id=$1',[legacy.id])).rows[0].name).toBe('Replacement Name');
+  });
+  it('serves local geographic choices and validates address paths on creation and editing',async()=>{
+    const regions=await request(app).get('/api/geography').expect(200);expect(regions.body.places).toHaveLength(18);
+    const region=(await request(app).get('/api/geography?parent=0300000000')).body.places;
+    const bulacan=region.find((p:any)=>p.name==='Bulacan');expect(bulacan).toBeTruthy();
+    const cities=(await request(app).get('/api/geography?parent='+bulacan.code)).body.places;
+    const city=cities.find((p:any)=>p.name==='City of Meycauayan');
+    const barangays=(await request(app).get('/api/geography?parent='+city.code)).body.places;
+    const barangay=barangays.find((p:any)=>p.name==='Calvario');
+    const codes={regionCode:'0300000000',provinceCode:bulacan.code,cityCode:city.code,barangayCode:barangay.code};
+    const created=await post(officer,'/patients',{...intake,...codes,street:'123 Example St'}).expect(200);
+    const profile=await officer.get(`/api/patients/${created.body.id}`).expect(200);expect(profile.body).toMatchObject({region:'Region III (Central Luzon)',province:'Bulacan',city:'City of Meycauayan',barangay:'Calvario',street:'123 Example St',addressRelease:'2026-Q3'});
+    await patch(officer,`/patients/${created.body.id}`,{regionCode:'1300000000'}).expect(400);
+    await patch(officer,`/patients/${created.body.id}`,{regionCode:'1300000000',provinceCode:'',cityCode:'1380600000',barangayCode:'1380601001'}).expect(200);
+    await patch(officer,`/patients/${created.body.id}`,{regionCode:'',provinceCode:'',cityCode:'',barangayCode:''}).expect(200);
+    expect((await officer.get(`/api/patients/${created.body.id}`)).body.barangay).toBe('');
+    await post(officer,'/patients',{...intake,regionCode:'0300000000'}).expect(400);
+  });
+  it('applies migration 002 once to a populated initial schema without changing patient history',async()=>{
+    const client=await root.connect(),migrationSchema='migration_'+randomBytes(6).toString('hex');
+    try {
+      await client.query(`CREATE SCHEMA ${migrationSchema}`);await client.query(`SET search_path=${migrationSchema}`);
+      await client.query(await readFile(new URL('../server/schema.sql',import.meta.url),'utf8'));
+      await client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now())');
+      await client.query("INSERT INTO schema_migrations(version) VALUES('001')");
+      const old=(await client.query("INSERT INTO patients(name,birth_date,barangay) VALUES('Original Full Name','1990-01-01','Legacy address') RETURNING id")).rows[0];
+      const oldFacility=(await client.query("INSERT INTO facilities(name) VALUES('Original unit') RETURNING id")).rows[0];
+      const oldSession=(await client.query("INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,'2026-01-01','original-session') RETURNING id",[oldFacility.id])).rows[0];
+      const oldVisit=(await client.query("INSERT INTO visits(session_id,patient_id,number,tracking_token) VALUES($1,$2,1,'original-ticket') RETURNING id",[oldSession.id,old.id])).rows[0];
+      await applyMigrations(client);await applyMigrations(client);
+      expect((await client.query('SELECT patient_id FROM visits WHERE id=$1',[oldVisit.id])).rows[0].patient_id).toBe(old.id);
+      const migrated=(await client.query('SELECT * FROM patients WHERE id=$1',[old.id])).rows[0];
+      expect(migrated).toMatchObject({id:old.id,name:'Original Full Name',barangay:'Legacy address',first_name:'',sex:'',dswd_nhts:null});
+      expect((await client.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map(r=>r.version)).toEqual(['001','002']);
+    } finally {await client.query('SET search_path=public');await client.query(`DROP SCHEMA ${migrationSchema} CASCADE`);client.release();}
+  });
   it('requires guardian details for guest minors',async()=>{
-    await request(app).post(`/api/join/${s.token}`).send({name:'Child Example',birthDate:'2020-01-01',queueId:q.id,consent:true}).expect(400);
+    await request(app).post(`/api/join/${s.token}`).send({firstName:'Child',lastName:'Example',sex:'Female',birthDate:'2020-01-01',queueId:q.id,consent:true}).expect(400);
   });
   it('links an in-person-verified guest to a matching unused patient account',async()=>{
     const guest=await makePatient('patient');await checkin(guest.id).then(r=>expect(r.status).toBe(200));const email=(await patient.get('/api/auth/me')).body.user.email;

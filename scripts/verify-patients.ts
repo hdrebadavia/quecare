@@ -1,0 +1,60 @@
+import { chromium, expect } from '@playwright/test';
+import pg from 'pg';
+import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
+import { mkdir } from 'node:fs/promises';
+import type { Server } from 'node:http';
+import { applyMigrations } from '../server/migrations';
+// All writes are confined to a disposable local schema, including registrations.
+const url=new URL(process.env.TEST_DATABASE_URL||'postgresql://127.0.0.1:55432/quecare');
+const root=new pg.Pool({connectionString:url.toString()}),schema='browser_patients_'+randomBytes(6).toString('hex');
+let db:pg.Pool|undefined,server:Server|undefined,browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
+try {
+  await root.query(`CREATE SCHEMA ${schema}`);url.searchParams.set('options',`-c search_path=${schema}`);
+  process.env.DATABASE_URL=url.toString();process.env.NODE_ENV='test';process.env.ALLOW_DEMO_LOGIN='false';
+  db=(await import('../server/db')).pool;
+  const client=await db.connect();try{await applyMigrations(client);}finally{client.release();}
+  const facility=(await db.query("INSERT INTO facilities(name) VALUES('Patient Browser Unit') RETURNING id")).rows[0];
+  const queue=(await db.query("INSERT INTO queues(facility_id,name,opens_at,cutoff) VALUES($1,'Triage','00:00','23:59') RETURNING id",[facility.id])).rows[0];
+  const session=(await db.query("INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,(now() AT TIME ZONE 'Asia/Manila')::date,'browser-patient-token') RETURNING id",[facility.id])).rows[0];
+  const hash=await bcrypt.hash('TestPassword123!',4);
+  const officer=(await db.query("INSERT INTO users(name,email,password_hash,role,facility_id) VALUES('Browser Officer','officer@test.local',$1,'queue_officer',$2) RETURNING id",[hash,facility.id])).rows[0];
+  await db.query('INSERT INTO queue_assignments(user_id,queue_id) VALUES($1,$2)',[officer.id,queue.id]);
+  const {app}=await import('../server/app');server=app.listen(0,'127.0.0.1');await new Promise<void>(r=>server!.on('listening',r));
+  const origin=`http://127.0.0.1:${(server.address() as {port:number}).port}`;process.env.APP_URL=origin;
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(origin);await page.getByRole('button',{name:'Sign in / Register'}).click();await page.getByRole('button',{name:'Create a patient account',exact:true}).click();
+  await page.getByLabel('First name',{exact:true}).fill('Ana');await page.getByLabel('Last name',{exact:true}).fill('Example');await page.getByLabel('Date of birth',{exact:true}).fill('1990-01-01');await page.getByLabel('Sex',{exact:true}).selectOption('Female');
+  await page.getByLabel('Civil status',{exact:true}).selectOption('Married');await page.getByLabel('Maiden name',{exact:true}).fill('Reyes');await page.getByLabel('Spouse’s name',{exact:true}).fill('Sam Example');
+  await page.getByLabel('Sex',{exact:true}).selectOption('Male');await expect(page.getByLabel('Maiden name',{exact:true})).toHaveCount(0);await page.getByLabel('Sex',{exact:true}).selectOption('Female');await expect(page.getByLabel('Maiden name',{exact:true})).toHaveValue('');
+  await page.getByLabel('Maiden name',{exact:true}).fill('Reyes');
+  await page.getByLabel('Family member position',{exact:true}).selectOption('Others');await page.getByLabel('Other family member position',{exact:true}).fill('Grandmother');
+  await page.getByLabel('4Ps member',{exact:true}).selectOption('true');await page.getByLabel('Household No.',{exact:true}).fill('000123');
+  await page.getByLabel('PhilHealth member',{exact:true}).selectOption('true');await page.getByLabel('PhilHealth status type',{exact:true}).selectOption('Dependent');await page.getByLabel('PhilHealth No.',{exact:true}).fill('001234');await page.getByLabel('PhilHealth category',{exact:true}).selectOption('IE');
+  console.log('Desktop conditional fields checked.');
+  await page.getByLabel('Region',{exact:true}).selectOption('0300000000');await page.getByLabel('Province',{exact:true}).selectOption({label:'Bulacan'});await page.getByLabel('City / municipality',{exact:true}).selectOption({label:'City of Meycauayan'});await page.getByLabel('Barangay',{exact:true}).selectOption({label:'Calvario'});
+  await page.getByLabel('Email address',{exact:true}).fill('patient@test.local');await page.getByLabel('Password · at least 10 characters',{exact:true}).fill('TestPassword123!');await page.locator('input[name=consent]').check();await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button',{name:'My information',exact:true}).click();await expect(page.getByRole('heading',{name:'Ana Example',exact:true})).toBeVisible();await expect(page.getByText('000123',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Edit information',exact:true}).click();await page.getByLabel('First name',{exact:true}).fill('Anita');await page.getByLabel('4Ps member',{exact:true}).selectOption('false');await page.getByLabel('PhilHealth member',{exact:true}).selectOption('false');
+  await page.getByRole('button',{name:'Save patient information',exact:true}).click();await expect(page.getByRole('heading',{name:'Anita Example',exact:true})).toBeVisible();await expect(page.getByText('000123',{exact:true})).toHaveCount(0);
+  await mkdir('.local/screenshots',{recursive:true});await page.screenshot({path:'.local/screenshots/patient-profile-desktop.png',fullPage:true});
+  console.log('Desktop signup and patient editing checked.');
+  const mobile=await browser.newContext({viewport:{width:360,height:800},isMobile:true,hasTouch:true}),m=await mobile.newPage();m.on('pageerror',e=>errors.push(e.message));
+  await m.goto(origin+'/?join=browser-patient-token');await m.getByRole('button',{name:'Continue as a guest'}).click();await m.getByLabel('First name',{exact:true}).fill('Guest');await m.getByLabel('Last name',{exact:true}).fill('Child');await m.getByLabel('Sex',{exact:true}).selectOption('Female');await m.getByLabel('Date of birth',{exact:true}).fill('2020-01-01');await m.getByLabel('Guardian / representative (if applicable)',{exact:true}).fill('Parent Example');
+  await m.getByLabel('Region',{exact:true}).selectOption('1300000000');await expect(m.locator('select[name=provinceCode]')).toHaveCount(0);await m.getByLabel('City / municipality',{exact:true}).selectOption('1380600000');await m.getByLabel('Find barangay',{exact:true}).fill('Barangay 1');await m.getByLabel('Barangay',{exact:true}).selectOption('1380601001');
+  await m.getByLabel('Region',{exact:true}).selectOption('0300000000');await expect(m.getByLabel('City / municipality',{exact:true})).toHaveValue('');await expect(m.getByLabel('Barangay',{exact:true})).toHaveValue('');await m.getByRole('button',{name:'Clear residential address'}).click();
+  await m.getByLabel('4Ps member',{exact:true}).selectOption('true');await m.getByLabel('Household No.',{exact:true}).fill('000999');await m.locator('input[name=consent]').check();await m.locator('select[name=queueId]').selectOption(queue.id);
+  if(await m.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('360px registration overflows horizontally');
+  await m.screenshot({path:'.local/screenshots/patient-registration-mobile.png',fullPage:true});await m.getByRole('button',{name:'Register for arrival confirmation',exact:true}).click();await expect(m.getByRole('heading',{name:'You’re registered.',exact:true})).toBeVisible();
+  console.log('Mobile guest registration checked.');
+  const guest=(await db.query("SELECT id FROM patients WHERE name='Guest Child'")).rows[0];
+  const staffContext=await browser.newContext(),staff=await staffContext.newPage();staff.on('pageerror',e=>errors.push(e.message));await staff.goto(origin);await staff.getByRole('button',{name:'Sign in / Register'}).click();await staff.getByLabel('Email address').fill('officer@test.local');await staff.getByLabel('Password',{exact:true}).fill('TestPassword123!');await staff.getByRole('button',{name:'Sign in',exact:true}).click();await expect(staff.getByRole('dialog')).toHaveCount(0);
+  await staff.getByRole('button',{name:'Patient information',exact:true}).click();await staff.getByLabel('Search patient name').fill('Guest Child');await staff.getByRole('button',{name:/Guest Child/}).click();await expect(staff.getByText('000999',{exact:true})).toBeVisible();await staff.getByRole('button',{name:'Edit information',exact:true}).click();await staff.getByLabel('Contact number',{exact:true}).fill('09123456789');await staff.getByRole('button',{name:'Save patient information',exact:true}).click();await expect(staff.getByText('09123456789',{exact:true})).toBeVisible();
+  await staff.getByRole('button',{name:'Live queues',exact:true}).click();await staff.getByRole('button',{name:'Issue number',exact:true}).click();await staff.getByRole('button',{name:'Register a new patient',exact:true}).click();await staff.getByLabel('First name',{exact:true}).fill('Staff');await staff.getByLabel('Last name',{exact:true}).fill('Created');await staff.getByLabel('Sex',{exact:true}).selectOption('Male');await staff.getByLabel('Date of birth',{exact:true}).fill('1990-01-01');await staff.locator('input[name=consent]').check();await staff.getByRole('button',{name:'Create patient profile',exact:true}).click();await expect(staff.getByRole('button',{name:'View patient information',exact:true})).toBeVisible();await staff.getByRole('button',{name:'View patient information',exact:true}).click();await expect(staff.getByRole('heading',{name:'Staff Created',exact:true})).toBeVisible();
+  const saved=(await db.query('SELECT guardian_name,household_no,phone FROM patients WHERE id=$1',[guest.id])).rows[0];expect(saved).toEqual({guardian_name:'Parent Example',household_no:'000999',phone:'09123456789'});
+  if(errors.length)throw new Error(errors.join('\n'));
+  console.log('Patient browser checks passed: desktop signup and profile editing; 360px guest registration, conditional cleanup, address cascading/search; facility staff viewing, editing, and creation.');
+} finally {
+  if(browser)await browser.close();if(server)await new Promise<void>((resolve,reject)=>server!.close(e=>e?reject(e):resolve()));if(db)await db.end();await root.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);await root.end();
+}

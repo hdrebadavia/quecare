@@ -124,7 +124,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 
 1. Scan today's QR or open the copied registration link.
 2. Confirm Health Unit 2 and today's date; select **Continue as a guest**.
-3. Enter the fictional patient's name, date of birth, and barangay. Complete consent; provide a guardian/representative when required, including for a minor.
+3. Enter the fictional patient's first and last name, date of birth, and sex. Optionally select the residential address through barangay. Complete consent; provide a guardian/representative when required, including for a minor.
 4. Choose **Triage** under **Where do you need to go?**.
 5. Select **Register for arrival confirmation**.
 6. Keep the tracking page open and use **Copy my private tracking link** to retain it privately.

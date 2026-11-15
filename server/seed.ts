@@ -12,7 +12,7 @@ await transaction(async db=>{
   for(const facility of fs){for(const [i,name,desc] of [[0,'Triage','Initial assessment and vital signs'],[1,'Consultation','General primary care consultation'],[2,'Nurse Station','Nursing care and follow-up'],[3,'Vaccination','Scheduled immunization services']] as const)await db.query("INSERT INTO queues(facility_id,name,description,sort_order,opens_at,cutoff) VALUES($1,$2,$3,$4,'07:00','18:00') ON CONFLICT(facility_id,name) DO NOTHING",[facility.id,name,desc,i]);}
   const queues=(await db.query('SELECT * FROM queues WHERE facility_id=$1 ORDER BY sort_order',[f.id])).rows;
   for(const q of queues){for(const u of [officer,provider])await db.query('INSERT INTO queue_assignments(user_id,queue_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[u.id,q.id]);}
-  if(!await one(db,'SELECT id FROM patients WHERE user_id=$1',[patientUser.id]))await db.query("INSERT INTO patients(user_id,name,birth_date,barangay,phone) VALUES($1,$2,'1996-04-12','Calvario','')",[patientUser.id,patientUser.name]);
+  if(!await one(db,'SELECT id FROM patients WHERE user_id=$1',[patientUser.id]))await db.query("INSERT INTO patients(user_id,name,birth_date,barangay,phone,first_name,last_name,sex) VALUES($1,$2,'1996-04-12','Calvario','','Andrea','Mendoza','Female')",[patientUser.id,patientUser.name]);
   const existing=await one(db,'SELECT id FROM daily_sessions WHERE facility_id=$1 AND day=$2',[f.id,dayInManila()]);
   if(!existing){
     const session=await one(db,'INSERT INTO daily_sessions(facility_id,day,token,next_number) VALUES($1,$2,$3,17) RETURNING *',[f.id,dayInManila(),token()]);

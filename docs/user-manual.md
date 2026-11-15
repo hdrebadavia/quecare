@@ -93,7 +93,7 @@ Queue Officers and providers can create and manage activities only when an admin
 
 1. Scan the QR and check the displayed Health Unit and registration date.
 2. Select **Continue as a guest**.
-3. Enter the patient's full name and date of birth. Add barangay and optional mobile number as appropriate.
+3. Enter the patient's first and last name, date of birth, and sex. Add other details, residential address, and contact number when available.
 4. Enter a **Guardian / representative** for a patient under 18, or where applicable.
 5. Read and acknowledge the registration privacy/consent statement.
 6. Under **Where do you need to go?**, choose an entry station.
@@ -597,3 +597,22 @@ Use fictional people and a demonstration environment. These examples combine the
 **Announcements:** Existing announcement controls remain available to authorized facility administrators and system administrators. Confirm the publication prompt to publish the announcement to the unit’s monitor and notification bell.
 
 **If there are no units:** Sign in as a system administrator from the empty screen, then use **Add Health Unit**. Other users see an explanation until a unit becomes available.
+
+## Patient information
+
+Patients can open **My information** after signing in to review their identity, family, education, employment, household, residential address, contact details, and program memberships. Select **Edit information**, make corrections, and select **Save patient information**. Cancel discards unsaved changes. Name corrections also update the account's displayed name.
+
+Staff can open **Patient information**, search by name, and select the verified patient. The same page is available through **View patient information** in staff patient selection and patient records. Queue Officers, providers, and facility administrators may view and edit patients connected to their assigned Health Unit by registration, visits, bookings, or staff profile creation. System administrators have global access. This page does not grant access to clinical notes.
+
+All three registration forms—account signup, guest QR registration, and staff-assisted creation—collect the same information. First and last name, birth date, sex, and registration consent are required. Middle name and suffix are optional. A guardian/representative is required for patients under 18. Other details are optional unless a conditional answer requires them:
+
+- Maiden name appears for Female + Married; spouse's name appears for Married or Co-habitation. Both are optional.
+- Family member position **Others** requires a description.
+- **4Ps member: Yes** requires Household No.
+- **PhilHealth member: Yes** requires status type, PhilHealth No., and category.
+
+Membership questions start as **Not recorded**; choose Yes or No when known. Leading zeros in household and PhilHealth numbers are preserved. Changing an answer so that a dependent field no longer applies clears that field when saved.
+
+For a residential address, select region, province when applicable, city/municipality, and barangay. Each selector has a name search. Cities without a province are available directly under their region; in regions with both types, choose **City without a province** in the province selector. Changing a parent clears the selections below it. Address is optional, but an address started must be completed through barangay. Street/house number is optional. **Clear residential address** explicitly removes the geographic address; street is edited separately.
+
+Older profiles retain their original full name and barangay. They are not automatically split or mapped to geographic codes. You may update unrelated details without supplying missing new fields. Enter both first and last name to replace an old full name. A previously recorded barangay stays until a structured address replaces it or it is explicitly cleared. Public queue monitors and private ticket tracking do not display the expanded patient profile.

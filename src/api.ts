@@ -3,7 +3,7 @@ export function setCsrf(value:string){csrf=value;}
 export async function api<T=any>(path:string,method='GET',body?:unknown):Promise<T>{
   const isForm=body instanceof FormData;
   const response=await fetch(`/api${path}`,{method,credentials:'same-origin',headers:{...(isForm?{}:{'Content-Type':'application/json'}),...(csrf?{'X-CSRF-Token':csrf}:{}),...(method==='POST'&&path.includes('/actions')?{'Idempotency-Key':crypto.randomUUID()}:{})},...(body!==undefined?{body:isForm?body:JSON.stringify(body)}:{})});
-  const data=await response.json().catch(()=>({error:'The service is unavailable. Please check your connection.'}));if(!response.ok)throw new Error(data.error||'Request failed.');return data;
+  const data=await response.json().catch(()=>({error:'The service is unavailable. Please check your connection.'}));if(!response.ok)throw Object.assign(new Error(data.error||'Request failed.'),{fieldErrors:data.fieldErrors||{}});return data;
 }
 export const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export const time=(date:string)=>new Date(date).toLocaleTimeString('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'});

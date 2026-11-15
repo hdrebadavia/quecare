@@ -2,7 +2,7 @@ import { chromium, expect } from '@playwright/test';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { applyMigrations } from '../server/migrations';
 import type { Server } from 'node:http';
 
 // Browser checks use their own schema, never the application's saved data.
@@ -16,7 +16,7 @@ try {
   url.searchParams.set('options', `-c search_path=${schema}`);
   process.env.DATABASE_URL = url.toString(); process.env.NODE_ENV = 'test'; process.env.DEMO_MODE = 'false';
   db = (await import('../server/db')).pool;
-  await db.query(await readFile(new URL('../server/schema.sql', import.meta.url), 'utf8'));
+  const migrationClient=await db.connect();try{await applyMigrations(migrationClient);}finally{migrationClient.release();}
   const hash = await bcrypt.hash('TestPassword123!', 4);
   await db.query("INSERT INTO users(name,email,password_hash,role) VALUES('Browser Admin','units-admin@test.local',$1,'system_admin')", [hash]);
   const { app } = await import('../server/app');

@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tsconfig.json vite.config.ts index.html ./
+COPY shared ./shared
 COPY src ./src
 COPY server ./server
 COPY scripts ./scripts
@@ -19,6 +20,7 @@ ENV NODE_ENV=production PORT=3001
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY server ./server
+COPY shared ./shared
 COPY scripts ./scripts
 COPY --from=build /app/dist ./dist
 COPY deploy/supabase ./deploy/supabase

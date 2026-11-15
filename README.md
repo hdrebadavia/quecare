@@ -68,6 +68,7 @@ Free Render hosting can demonstrate the app but sleeps when idle. Use an always-
 npm run build             # TypeScript checks + production build
 npm test                  # Domain tests; DB suite skipped by default
 npm run test:integration  # Real PostgreSQL, isolated disposable test schema
+npm run verify:patients   # Isolated patient intake/profile checks in Chrome
 npm run verify:browser    # Local servers running; installed Chrome required
 npm run verify:production # Built app, production headers, no demo shortcuts
 npm audit
@@ -82,6 +83,8 @@ Integration tests cover concurrent issuance/calls, idempotency, queue transfers,
 See [the deployment plan and runbook](docs/deployment.md) for Cloudflare Workers frontend hosting, the existing Express backend in Docker, Supabase PostgreSQL/private Storage, Resend, CI, provisioning and rollback. This setup preserves the current app, authentication and polling. Supabase Auth, Edge Functions, per-user RLS, Android and new integrations remain separate work.
 
 ## Documents
+
+- [Expanded patient information: migration, APIs, address source, and verification](docs/patient-information.md)
 
 - [System walkthrough: presentation outline, feature scripts, and test accounts](docs/system-walkthrough.md)
 - [User manual: step-by-step use cases for every user type](docs/user-manual.md)
