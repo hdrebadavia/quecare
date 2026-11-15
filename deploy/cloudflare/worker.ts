@@ -48,19 +48,36 @@ export default {
     headers.set('X-Forwarded-Proto', 'https');
     // Preserve Origin, Cookie, CSRF, multipart boundaries, and the request body.
     // Do not follow redirects with credentials to another origin.
-    try {
-      const response = await fetch(target, {
-        method: request.method,
-        headers,
-        body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'manual',
-        // Allow the selected free Render instance time to wake after idling.
-        signal: AbortSignal.timeout(90000),
-        cache: 'no-store',
-      });
-      return finish(response, true);
-    } catch {
-      return finish(Response.json({ error: 'The service is temporarily unavailable. Please try again.' }, { status: 502 }), true);
+    const safeRead = request.method === 'GET' || request.method === 'HEAD';
+    const deadline = Date.now() + 90000;
+    const delays = [1000, 2000, 4000, 8000, 12000, 16000, 20000];
+    const unavailable = (status = 502) => finish(Response.json({
+      error: 'The health service is starting or temporarily unavailable. Please wait while we reconnect.',
+      retryable: true,
+    }, { status, headers: { 'Retry-After': '5' } }), true);
+    for (let attempt = 0; ; attempt++) {
+      let response: Response | undefined;
+      try {
+        response = await fetch(target, {
+          method: request.method,
+          headers,
+          body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+          redirect: 'manual',
+          signal: AbortSignal.timeout(Math.max(1, Math.min(safeRead ? 30000 : 90000, deadline - Date.now()))),
+          cache: 'no-store',
+        });
+      } catch { /* Network failures are retried only for reads. */ }
+      const html = response?.headers.get('content-type')?.toLowerCase().includes('text/html');
+      const transient = !response || [502, 503, 504].includes(response.status) || (response.ok && html);
+      if (!transient && response) return finish(response, true);
+      const delay = delays[attempt];
+      if (!safeRead || delay === undefined || Date.now() + delay >= deadline) {
+        // Render can send an HTML loading/error page instead of an API response.
+        if (response && !html) return finish(response, true);
+        return unavailable(response?.status === 503 || response?.ok ? 503 : 502);
+      }
+      await response?.body?.cancel();
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   },
 };

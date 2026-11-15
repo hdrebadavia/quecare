@@ -68,6 +68,7 @@ Free Render hosting can demonstrate the app but sleeps when idle. Use an always-
 npm run build             # TypeScript checks + production build
 npm test                  # Domain tests; DB suite skipped by default
 npm run test:integration  # Real PostgreSQL, isolated disposable test schema
+npm run verify:recovery   # Desktop/mobile recovery from simulated startup outages
 npm run verify:patients   # Isolated patient intake/profile checks in Chrome
 npm run verify:browser    # Local servers running; installed Chrome required
 npm run verify:production # Built app, production headers, no demo shortcuts

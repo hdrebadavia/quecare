@@ -5,7 +5,7 @@ const env = {
   API_ORIGIN: 'https://api.example.com',
   ASSETS: { fetch: vi.fn(async () => new Response('<html>QueCare</html>', { headers: { 'Content-Type': 'text/html' } })) },
 };
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('Cloudflare deployment gateway', () => {
   it('serves the existing frontend with security headers', async () => {
@@ -54,6 +54,7 @@ describe('Cloudflare deployment gateway', () => {
   });
 
   it('fails safely for missing/unsafe backend configuration and upstream outages', async () => {
+    vi.useFakeTimers();
     const fetcher = vi.fn(async () => { throw new Error('private upstream details'); });
     vi.stubGlobal('fetch', fetcher);
     for (const origin of ['', 'http://api.example.com', 'https://user:pass@api.example.com', 'https://api.example.com/path', 'https://quecare.example.com']) {
@@ -61,9 +62,37 @@ describe('Cloudflare deployment gateway', () => {
       expect(result.status).toBe(503);
     }
     expect(fetcher).not.toHaveBeenCalled();
-    const result = await worker.fetch(new Request('https://quecare.example.com/api/health'), env);
+    const pending = worker.fetch(new Request('https://quecare.example.com/api/health'), env);
+    await vi.runAllTimersAsync();
+    const result = await pending;
     expect(result.status).toBe(502);
     expect(result.headers.get('cache-control')).toBe('no-store');
     expect(await result.text()).not.toContain('private upstream details');
   });
+  it('waits through Render HTML errors and returns the recovered JSON response', async () => {
+    vi.useFakeTimers();
+    const upstream=vi.fn().mockResolvedValueOnce(new Response('<html>502</html>',{status:502,headers:{'Content-Type':'text/html','X-Render-Routing':'no-deploy'}}))
+      .mockResolvedValueOnce(new Response('<html>starting</html>',{status:200,headers:{'Content-Type':'text/html'}}))
+      .mockResolvedValueOnce(Response.json([{id:'unit'}]));
+    vi.stubGlobal('fetch',upstream);
+    const pending=worker.fetch(new Request('https://quecare.example.com/api/facilities'),env);
+    await vi.runAllTimersAsync();const response=await pending;
+    expect(upstream).toHaveBeenCalledTimes(3);expect(response.status).toBe(200);expect(await response.json()).toEqual([{id:'unit'}]);expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+  it('bounds read retries and returns a JSON error instead of an HTML outage page', async () => {
+    vi.useFakeTimers();const upstream=vi.fn(async()=>new Response('<html>502</html>',{status:502,headers:{'Content-Type':'text/html'}}));vi.stubGlobal('fetch',upstream);
+    const pending=worker.fetch(new Request('https://quecare.example.com/api/auth/me'),env);await vi.runAllTimersAsync();const response=await pending;
+    expect(upstream).toHaveBeenCalledTimes(8);expect(response.status).toBe(502);expect(response.headers.get('Retry-After')).toBe('5');expect((await response.json()).retryable).toBe(true);
+  });
+  it('never replays a mutation after a routing failure', async () => {
+    const upstream=vi.fn(async()=>new Response('<html>502</html>',{status:502,headers:{'Content-Type':'text/html'}}));vi.stubGlobal('fetch',upstream);
+    const response=await worker.fetch(new Request('https://quecare.example.com/api/auth/register',{method:'POST',body:'{}'}),env);
+    expect(upstream).toHaveBeenCalledTimes(1);expect(response.status).toBe(502);expect(response.headers.get('content-type')).toContain('application/json');
+  });
+  it('returns authorization failures without retrying', async () => {
+    const upstream=vi.fn(async()=>Response.json({error:'Forbidden'},{status:403}));vi.stubGlobal('fetch',upstream);
+    const response=await worker.fetch(new Request('https://quecare.example.com/api/patients/me'),env);
+    expect(response.status).toBe(403);expect(upstream).toHaveBeenCalledTimes(1);
+  });
+
 });

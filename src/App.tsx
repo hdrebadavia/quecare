@@ -13,16 +13,17 @@ const nav=[{id:'patient-info',label:'Patient information',icon:Users},{id:'overv
 export default function App(){
   const [patientId,setPatientId]=useState<string|null>(null);
   const [user,setUser]=useState<User|null>(null),[ready,setReady]=useState(false),[page,setPage]=useState('overview'),[facilityId,setFacilityId]=useState(localStorage.getItem('quecare-facility')||''),[login,setLogin]=useState(false),[revision,setRevision]=useState(0),[toast,setToast]=useState<{message:string;error:boolean}|null>(null),[mobileNav,setMobileNav]=useState(false),[assistant,setAssistant]=useState(false);
-  const {data:facilities,error}=useLoad<Facility[]>('/facilities',revision);const {data:config}=useLoad('/config');
+  const {data:facilities,error,retrying}=useLoad<Facility[]>('/facilities',revision);
+  const {data:startupSession,error:sessionError,retrying:sessionRetrying}=useLoad<{user:User|null;csrf?:string}>('/auth/me',revision);const {data:config}=useLoad('/config');
   const params=new URLSearchParams(location.search);const join=params.get('join'),track=params.get('track'),monitor=params.get('monitor'),reset=params.get('reset');
   const notify=(message:string,error=false)=>setToast({message,error});
   async function refreshUser(){try{const me=await api('/auth/me');setUser(me.user);setCsrf(me.csrf||'');if(me.user?.facility_id)setFacilityId(me.user.facility_id);}catch(e){notify((e as Error).message,true);}finally{setReady(true);}}
-  useEffect(()=>{void refreshUser();},[]);
+  useEffect(()=>{if(startupSession){setUser(startupSession.user);setCsrf(startupSession.csrf||'');if(startupSession.user?.facility_id)setFacilityId(startupSession.user.facility_id);setReady(true);}},[startupSession]);
   useEffect(()=>{if(toast){const id=setTimeout(()=>setToast(null),6000);return()=>clearTimeout(id);}},[toast]);
   const facility=facilities?.find(f=>f.id===facilityId)||facilities?.[0];
   useEffect(()=>{if(!facilities)return;const id=facility?.id||'';if(id!==facilityId)setFacilityId(id);if(id)localStorage.setItem('quecare-facility',id);else localStorage.removeItem('quecare-facility');},[facilities,facility?.id,facilityId]);
   const navigate=(id:string)=>{setPage(id);setMobileNav(false);};
-  if(!ready||!facilities)return <div className="boot"><Brand/><ErrorBox message={error}/><Loading/></div>;
+  if(!ready||!facilities)return <div className="boot"><Brand/>{(retrying||sessionRetrying)?<Loading message="Connecting to your Health Unit. The service may be starting up. We’ll keep trying."/>:<><ErrorBox message={error||sessionError}/><Loading message="Connecting to your Health Unit. This may take about a minute."/></>}{(error||sessionError)&&<button className="button secondary" onClick={()=>setRevision(r=>r+1)}>Retry connection</button>}</div>;
   if(!facility)return <div className="boot"><Brand/><h1>No Health Units configured</h1>{user?.role==='system_admin'?<HealthUnits reload={revision} onChange={()=>setRevision(r=>r+1)} notify={notify}/>:<p>A system administrator needs to add a Health Unit before services are available.</p>}{!user?<button className="button primary" onClick={()=>setLogin(true)}>Sign in / Register</button>:<button className="button secondary" onClick={async()=>{await api('/auth/logout','POST',{});setUser(null);setCsrf('');}}>Sign out</button>}{login&&<AuthModal onClose={()=>setLogin(false)} onSuccess={async()=>{await refreshUser();setLogin(false);setRevision(r=>r+1);}} demo={config?.demo}/>}</div>;
   const ctx:Context={user,facility,notify,reload:revision,bump:()=>setRevision(r=>r+1),navigate,selectFacility:setFacilityId,refreshUser,openPatient:(id)=>{setPatientId(id);navigate('patient-info');}};
   const isStaff=!!user&&user.role!=='patient',isAdmin=!!user&&['system_admin','facility_admin'].includes(user.role);

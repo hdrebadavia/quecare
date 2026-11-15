@@ -1,16 +1,34 @@
 import { Children, cloneElement, isValidElement, createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertCircle, Check, LoaderCircle, X, Inbox } from 'lucide-react';
-import { api } from './api';
+import { api, ApiError } from './api';
 export type User={id:string;name:string;email:string;role:string;facility_id:string|null;can_manage_activities:boolean};
 export type Facility={id:string;name:string;address:string;announcement:string};
 export type Context={user:User|null;facility:Facility;notify:(message:string,error?:boolean)=>void;reload:number;bump:()=>void;navigate:(page:string)=>void;selectFacility:(id:string)=>void;refreshUser:()=>Promise<void>;openPatient:(id:string)=>void};
 export function useLoad<T=any>(path:string|null,revision=0,interval=0){
-  const [data,setData]=useState<T|null>(null),[error,setError]=useState(''),[updated,setUpdated]=useState(0);
+  const [data,setData]=useState<T|null>(null),[error,setError]=useState(''),[updated,setUpdated]=useState(0),[retrying,setRetrying]=useState(false);
   const previousPath=useRef(path);
-  useEffect(()=>{let alive=true;if(previousPath.current!==path)setData(null);previousPath.current=path;setError('');const load=async()=>{if(!path)return;try{const d=await api<T>(path);if(alive){setData(d);setError('');setUpdated(Date.now());}}catch(e){if(alive)setError((e as Error).message);}};void load();const id=interval?setInterval(()=>{if(document.visibilityState==='visible')void load();},interval):undefined;return()=>{alive=false;clearInterval(id);};},[path,revision,interval]);
-  return {data,error,updated};
+  useEffect(()=>{
+    let alive=true,timer:ReturnType<typeof setTimeout>|undefined;
+    if(previousPath.current!==path)setData(null);
+    previousPath.current=path;setError('');setRetrying(false);
+    const load=async()=>{
+      if(!path||!alive)return;
+      let delay=interval;
+      try {
+        const d=await api<T>(path);
+        if(alive){setData(d);setError('');setRetrying(false);setUpdated(Date.now());}
+      } catch(e) {
+        if(alive){setError((e as Error).message);const transient=e instanceof ApiError&&e.retryable;setRetrying(transient);if(transient)delay=5000;}
+      }
+      // Serialize reads, including polling, so a slow wake-up cannot create overlaps.
+      if(alive&&delay){const tick=()=>{if(!alive)return;if(document.visibilityState==='visible')void load();else timer=setTimeout(tick,delay);};timer=setTimeout(tick,delay);}
+    };
+    void load();
+    return()=>{alive=false;if(timer)clearTimeout(timer);};
+  },[path,revision,interval]);
+  return {data,error,updated,retrying};
 }
-export function Loading(){return <div className="empty"><LoaderCircle className="spin" size={24}/><p>Getting things ready…</p></div>;}
+export function Loading({message='Getting things ready…'}:{message?:string}){return <div className="empty" role="status"><LoaderCircle className="spin" size={24}/><p>{message}</p></div>;}
 export function Empty({title='Nothing here yet',children}:{title?:string;children?:ReactNode}){return <div className="empty"><Inbox size={30}/><h3>{title}</h3>{children&&<p>{children}</p>}</div>;}
 export function ErrorBox({message}:{message:string}){return message?<div className="alert error"><AlertCircle size={18}/>{message}</div>:null;}
 export function Badge({children,tone='neutral'}:{children:ReactNode;tone?:string}){return <span className={`badge ${tone}`}><span className="badge-dot"/>{children}</span>;}
