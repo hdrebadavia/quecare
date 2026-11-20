@@ -76,16 +76,16 @@ app.get('/api/facilities',async(_req,res)=>res.json((await pool.query('SELECT * 
 app.get('/api/public/queues/:facility',async(req,res)=>{
   const facility=uuid.parse(req.params.facility);const day=dayInManila();
   const queues=(await pool.query("SELECT id,name,description,status,opens_at,cutoff FROM queues WHERE facility_id=$1 AND status<>'archived' ORDER BY sort_order,name",[facility])).rows;
-  const entries=(await pool.query("SELECT e.id,e.queue_id,e.status,e.priority,e.entered_at,e.started_at,v.number,v.reconstructed FROM queue_entries e JOIN visits v ON v.id=e.visit_id JOIN daily_sessions s ON s.id=v.session_id WHERE s.facility_id=$1 AND s.day=$2 ORDER BY e.priority DESC,e.entered_at,e.id",[facility,day])).rows;
-  const session=await one(pool,'SELECT status FROM daily_sessions WHERE facility_id=$1 AND day=$2',[facility,day]);
-  res.set('Cache-Control','no-store').json({updatedAt:new Date(),sessionOpen:session?.status==='open',queues:queues.map(q=>{
+  const session=await one(pool,"SELECT id,status,session_number FROM daily_sessions WHERE facility_id=$1 AND day=$2 AND status='open'",[facility,day]);
+  const entries=(await pool.query("SELECT e.id,e.queue_id,e.status,e.priority,e.entered_at,e.started_at,v.number,v.reconstructed FROM queue_entries e JOIN visits v ON v.id=e.visit_id WHERE v.session_id=$1 ORDER BY e.priority DESC,e.entered_at,e.id",[session?.id||null])).rows;
+  res.set('Cache-Control','no-store').json({updatedAt:new Date(),sessionOpen:session?.status==='open',sessionNumber:session?.session_number||null,queues:queues.map(q=>{
     const own=entries.filter(e=>e.queue_id===q.id);return {...q,average:averageWait(own),serving:own.filter(e=>['called','serving'].includes(e.status)).map(e=>({number:e.number,status:e.status})),waiting:own.filter(e=>e.status==='waiting').map(e=>({number:e.number}))};
   })});
 });
 app.get('/api/tracking/:token',async(req,res)=>{
   const raw=z.string().regex(/^[a-f0-9]{48}$/).parse(req.params.token);
-  const visit=await one(pool,'SELECT v.id,v.number,v.status,v.arrived_at,v.completed_at,s.facility_id FROM visits v JOIN daily_sessions s ON s.id=v.session_id WHERE v.tracking_token=$1 OR v.request_id=(SELECT id FROM registration_requests WHERE tracking_token=$1)',[raw]);
-  if(!visit){const r=await one(pool,"SELECT r.status,q.name AS queue_name,s.facility_id,s.status AS session_status,s.day FROM registration_requests r JOIN queues q ON q.id=r.queue_id JOIN daily_sessions s ON s.id=r.session_id WHERE r.tracking_token=$1",[raw]);ensure(r,'Tracking reference not found.',404);return res.json({status:r.session_status==='closed'||r.day!==dayInManila()?'expired':r.status,facility_id:r.facility_id,queue_name:r.queue_name});}
+  const visit=await one(pool,'SELECT v.id,v.number,v.status,v.arrived_at,v.completed_at,s.facility_id,s.session_number FROM visits v JOIN daily_sessions s ON s.id=v.session_id WHERE v.tracking_token=$1 OR v.request_id=(SELECT id FROM registration_requests WHERE tracking_token=$1)',[raw]);
+  if(!visit){const r=await one(pool,"SELECT r.status,q.name AS queue_name,s.facility_id,s.session_number,s.status AS session_status,s.day FROM registration_requests r JOIN queues q ON q.id=r.queue_id JOIN daily_sessions s ON s.id=r.session_id WHERE r.tracking_token=$1",[raw]);ensure(r,'Tracking reference not found.',404);return res.json({status:r.session_status==='closed'||r.day!==dayInManila()?'expired':r.status,facility_id:r.facility_id,queue_name:r.queue_name});}
   const entries=(await pool.query('SELECT e.id,e.status,e.queue_id,e.entered_at,q.name AS queue_name FROM queue_entries e JOIN queues q ON q.id=e.queue_id WHERE e.visit_id=$1 ORDER BY e.entered_at',[visit.id])).rows;
   const current=entries.find(e=>['waiting','called','serving','skipped'].includes(e.status));let position=null;
   if(current?.status==='waiting') { const p=await one(pool,"SELECT count(*)::int AS position FROM queue_entries other JOIN visits v ON v.id=other.visit_id JOIN queue_entries mine ON mine.id=$1 WHERE other.queue_id=mine.queue_id AND other.status='waiting' AND (other.priority>mine.priority OR (other.priority=mine.priority AND (other.entered_at< mine.entered_at OR (other.entered_at=mine.entered_at AND other.id<=mine.id))))",[current.id]); position=p.position; }
@@ -110,19 +110,34 @@ app.get('/api/staff/dashboard',async(req,res)=>{
   const user=staff(req.user);const f=uuid.parse(req.query.facility);facilityAccess(user,f);
   const queues=(await pool.query("SELECT q.*,EXISTS(SELECT 1 FROM queue_assignments a WHERE a.queue_id=q.id AND a.user_id=$2) AS assigned FROM queues q WHERE q.facility_id=$1 AND q.status<>'archived' ORDER BY sort_order,q.name",[f,user.id])).rows;
   const allowed=queues.filter(q=>isAdmin(user)||q.assigned).map(q=>q.id);
-  const s=await one(pool,'SELECT * FROM daily_sessions WHERE facility_id=$1 AND day=$2',[f,dayInManila()]);
+  const s=await one(pool,"SELECT * FROM daily_sessions WHERE facility_id=$1 AND day=$2 ORDER BY (status='open') DESC,session_number DESC LIMIT 1",[f,dayInManila()]);
   const entries=(await pool.query("SELECT e.*,v.number,v.status AS visit_status,v.patient_id,v.reconstructed,p.name AS patient_name,p.birth_date FROM queue_entries e JOIN visits v ON v.id=e.visit_id JOIN patients p ON p.id=v.patient_id WHERE v.session_id=$1 AND e.queue_id=ANY($2::uuid[]) ORDER BY e.priority DESC,e.entered_at,e.id",[s?.id||null,allowed])).rows;
   const pending=(await pool.query("SELECT r.id,r.created_at,r.queue_id,p.name,p.birth_date,q.name AS queue_name FROM registration_requests r JOIN patients p ON p.id=r.patient_id JOIN queues q ON q.id=r.queue_id WHERE r.session_id=$1 AND r.status='pending' AND r.queue_id=ANY($2::uuid[]) ORDER BY r.created_at",[s?.id||null,allowed])).rows;
-  const summary=await one(pool,"SELECT count(*)::int AS total,count(*) FILTER(WHERE status='completed')::int AS completed,count(*) FILTER(WHERE status='active')::int AS active FROM visits WHERE session_id=$1",[s?.id||null]);
+  const summary=await one(pool,"SELECT count(*)::int AS total,count(*) FILTER(WHERE v.status='completed')::int AS completed,count(*) FILTER(WHERE v.status='active')::int AS active FROM visits v JOIN daily_sessions ds ON ds.id=v.session_id WHERE ds.facility_id=$1 AND ds.day=$2",[f,dayInManila()]);
   res.json({queues:queues.map(q=>({...q,operable:allowed.includes(q.id)})),session:s?{id:s.id,status:s.status,day:s.day,...(isAdmin(user)?{token:s.token}:{})}:null,entries,pending,summary});
 });
 app.post('/api/sessions/open',async(req,res)=>{
-  const user=admin(req.user);const f=uuid.parse(req.body.facilityId);facilityAccess(user,f);
-  const s=await transaction(async db=>{await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[f]);const expired=(await db.query("SELECT id FROM daily_sessions WHERE facility_id=$1 AND day<$2 AND status='open' ORDER BY day FOR UPDATE",[f,dayInManila()])).rows;for(const old of expired)await closeDailySession(db,user,old.id,f,'session.expire');const existing=await one(db,'SELECT * FROM daily_sessions WHERE facility_id=$1 AND day=$2',[f,dayInManila()]);if(existing){ensure(existing.status==='open','Today’s closed session cannot be reopened.');return existing;}const created=await one(db,'INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,$2,$3) RETURNING *',[f,dayInManila(),token()]);await audit(db,user,'session.open',created.id,f);return created;});res.json(s);
+  const user=admin(req.user),facilityId=uuid.parse(req.body.facilityId);facilityAccess(user,facilityId);
+  const session=await transaction(async db=>{
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[facilityId]);
+    const old=(await db.query("SELECT id FROM daily_sessions WHERE facility_id=$1 AND day<$2 AND status='open' ORDER BY day FOR UPDATE",[facilityId,dayInManila()])).rows;
+    for(const s of old)await closeDailySession(db,user,s.id,facilityId,'session.expire');
+    const active=await one(db,"SELECT * FROM daily_sessions WHERE facility_id=$1 AND day=$2 AND status='open'",[facilityId,dayInManila()]);
+    if(active)return active;
+    const last=await one(db,'SELECT coalesce(max(session_number),0)::int AS n FROM daily_sessions WHERE facility_id=$1 AND day=$2',[facilityId,dayInManila()]);
+    const facility=await one(db,'SELECT allow_multiple_sessions FROM facilities WHERE id=$1',[facilityId]);
+    ensure(facility,'Health Unit not found.',404);
+    ensure(last.n===0||facility.allow_multiple_sessions,'Today’s closed session cannot be reopened while multiple sessions are disabled.');
+    const created=await one(db,'INSERT INTO daily_sessions(facility_id,day,session_number,token) VALUES($1,$2,$3,$4) RETURNING *',[facilityId,dayInManila(),last.n+1,token()]);
+    await audit(db,user,'session.open',created.id,facilityId,{sessionNumber:created.session_number});
+    return created;
+  });res.json(session);
 });
 app.post('/api/sessions/:id/close',async(req,res)=>{
-  const user=admin(req.user);await transaction(async db=>{const s=await one(db,'SELECT * FROM daily_sessions WHERE id=$1 FOR UPDATE',[uuid.parse(req.params.id)]);ensure(s,'Session not found.',404);facilityAccess(user,s.facility_id);await closeDailySession(db,user,s.id,s.facility_id);});res.json({success:true});
+  const user=admin(req.user);await transaction(async db=>{const s=await one(db,'SELECT * FROM daily_sessions WHERE id=$1 FOR UPDATE',[uuid.parse(req.params.id)]);ensure(s,'Session not found.',404);facilityAccess(user,s.facility_id);ensure(s.status==='open','This session is already closed.');await closeDailySession(db,user,s.id,s.facility_id);});res.json({success:true});
 });
+app.get('/api/sessions/history',async(req,res)=>{const u=admin(req.user),facility=uuid.parse(req.query.facility);facilityAccess(u,facility);res.json((await pool.query("SELECT s.id,s.day,s.session_number,s.status,s.opened_at,s.closed_at,count(v.id)::int AS visits FROM daily_sessions s LEFT JOIN visits v ON v.session_id=s.id WHERE s.facility_id=$1 GROUP BY s.id ORDER BY s.day DESC,s.session_number DESC LIMIT 100",[facility])).rows);});
+app.put('/api/admin/facilities/:id/session-settings',async(req,res)=>{const u=requireRole(req.user,['system_admin']),facility=uuid.parse(req.params.id),input=z.object({allowMultipleSessions:z.boolean()}).parse(req.body);await transaction(async db=>{ensure(await one(db,'SELECT id FROM facilities WHERE id=$1 FOR UPDATE',[facility]),'Health Unit not found.',404);await db.query('UPDATE facilities SET allow_multiple_sessions=$1 WHERE id=$2',[input.allowMultipleSessions,facility]);await audit(db,u,'session.settings',facility,facility,{allowMultipleSessions:input.allowMultipleSessions});});res.json({success:true});});
 app.get('/api/sessions/:id/qr',async(req,res)=>{const u=admin(req.user);const s=await one(pool,'SELECT * FROM daily_sessions WHERE id=$1',[uuid.parse(req.params.id)]);ensure(s,'Session not found.',404);facilityAccess(u,s.facility_id);const url=`${process.env.APP_URL||'http://localhost:5173'}/?join=${s.token}`;res.json({url,data:await QRCode.toDataURL(url,{width:300,margin:2})});});
 app.post('/api/arrivals/:id/check-in',async(req,res)=>{
   const u=staff(req.user);const result=await transaction(async db=>{const requestId=uuid.parse(req.params.id);const preview=await one(db,'SELECT session_id FROM registration_requests WHERE id=$1',[requestId]);ensure(preview,'Arrival not found.',404);await db.query('SELECT id FROM daily_sessions WHERE id=$1 FOR UPDATE',[preview.session_id]);const r=await one(db,'SELECT * FROM registration_requests WHERE id=$1 FOR UPDATE',[requestId]);ensure(r,'Arrival not found.',404);ensure(r.status!=='expired','Arrival expired.');return issueVisit(db,u,{patientId:r.patient_id,sessionId:r.session_id,queueId:r.queue_id,requestId:r.id,...z.object({priority:z.boolean().default(false),reason:z.string().max(300).optional()}).parse(req.body)});});res.json(result);
