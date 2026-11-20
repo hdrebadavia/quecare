@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS facilities (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL UNIQUE, address text NOT NULL DEFAULT '', announcement text NOT NULL DEFAULT ''
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL UNIQUE, address text NOT NULL DEFAULT '', announcement text NOT NULL DEFAULT '', allow_multiple_sessions boolean NOT NULL DEFAULT false
 );
 CREATE TABLE IF NOT EXISTS users (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, email text NOT NULL UNIQUE,
@@ -32,9 +32,10 @@ CREATE TABLE IF NOT EXISTS queue_assignments (
 CREATE TABLE IF NOT EXISTS daily_sessions (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), facility_id uuid NOT NULL REFERENCES facilities(id),
  day date NOT NULL, token text NOT NULL UNIQUE, status text NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
- next_number int NOT NULL DEFAULT 1, opened_at timestamptz NOT NULL DEFAULT now(), closed_at timestamptz,
- UNIQUE(facility_id, day)
+ session_number int NOT NULL DEFAULT 1, next_number int NOT NULL DEFAULT 1, opened_at timestamptz NOT NULL DEFAULT now(), closed_at timestamptz,
+ UNIQUE(facility_id, day, session_number)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS one_open_session_per_facility ON daily_sessions(facility_id) WHERE status='open';
 CREATE TABLE IF NOT EXISTS registration_requests (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), session_id uuid NOT NULL REFERENCES daily_sessions(id),
  patient_id uuid NOT NULL REFERENCES patients(id), queue_id uuid NOT NULL REFERENCES queues(id),

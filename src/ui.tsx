@@ -2,7 +2,7 @@ import { Children, cloneElement, isValidElement, createContext, useContext, useE
 import { AlertCircle, Check, LoaderCircle, X, Inbox } from 'lucide-react';
 import { api, ApiError } from './api';
 export type User={id:string;name:string;email:string;role:string;facility_id:string|null;can_manage_activities:boolean};
-export type Facility={id:string;name:string;address:string;announcement:string};
+export type Facility={id:string;name:string;address:string;announcement:string;allow_multiple_sessions:boolean};
 export type Context={user:User|null;facility:Facility;notify:(message:string,error?:boolean)=>void;reload:number;bump:()=>void;navigate:(page:string)=>void;selectFacility:(id:string)=>void;refreshUser:()=>Promise<void>;openPatient:(id:string)=>void};
 export function useLoad<T=any>(path:string|null,revision=0,interval=0){
   const [data,setData]=useState<T|null>(null),[error,setError]=useState(''),[updated,setUpdated]=useState(0),[retrying,setRetrying]=useState(false);
