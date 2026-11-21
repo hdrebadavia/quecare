@@ -11,7 +11,7 @@ try{
   await page.getByRole('button',{name:'Sign in / Register'}).click();await page.getByRole('button',{name:'Administrator',exact:true}).click();
   await page.getByRole('heading',{name:/Good (morning|afternoon), Daniel/}).waitFor();await page.screenshot({path:'.local/screenshots/desktop-dashboard.png',fullPage:true});
   await page.getByRole('button',{name:'Live queues',exact:true}).click();await page.getByRole('heading',{name:'A clear next step, for everyone.'}).waitFor();
-  await page.getByRole('button',{name:'Daily QR',exact:true}).click();await page.getByAltText('QR code for today’s patient registration').waitFor();const joinUrl=await page.getByRole('textbox',{name:'Daily registration URL'}).inputValue();await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+  await page.getByRole('button',{name:'Session QR',exact:true}).click();await page.getByAltText('QR code for this session’s patient registration').waitFor();const joinUrl=await page.getByRole('textbox',{name:'Session registration URL'}).inputValue();await page.getByRole('button',{name:'Close dialog',exact:true}).click();
   for(const [nav,heading] of [['Activities & booking','A little planning. A healthier day.'],['Appointments','Appointments, organized.'],['Service directory','Know before you go.'],['Reports & insights','See what’s making a difference.'],['Administration','Set up better care.']]){
     await page.getByRole('button',{name:nav,exact:true}).click();await page.getByRole('heading',{name:heading,exact:true}).waitFor();await page.waitForTimeout(250);
     if(await page.locator('.alert.error').count())throw new Error(`${nav}: ${await page.locator('.alert.error').allTextContents()}`);

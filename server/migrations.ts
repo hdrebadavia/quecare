@@ -5,7 +5,11 @@ export async function applyMigrations(db: DB) {
   try {
     await db.query('SELECT pg_advisory_xact_lock(727010)');
     await db.query('CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
-    for (const [version,path] of [['001','./schema.sql'],['002','./migrations/002-patient-information.sql']]) {
+    for (const [version,path] of [
+      ['001','./schema.sql'],
+      ['002','./migrations/002-patient-information.sql'],
+      ['003','./migrations/003-multiple-daily-sessions.sql'],
+    ]) {
       if (!(await db.query('SELECT 1 FROM schema_migrations WHERE version=$1',[version])).rowCount) {
         await db.query(await readFile(new URL(path, import.meta.url), 'utf8'));
         await db.query('INSERT INTO schema_migrations(version) VALUES ($1)',[version]);

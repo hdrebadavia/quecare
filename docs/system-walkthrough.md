@@ -38,7 +38,7 @@ These accounts are defined in [server/seed.ts](../server/seed.ts). They are avai
 | Queue Officer | Ana Cruz | `officer@quecare.local` | `QueCareDemo2026!` | Assigned to all four seeded Health Unit 2 queues; assisted registration and queue operation. |
 | Healthcare provider / nurse | Nurse Isabel Garcia | `nurse@quecare.local` | `QueCareDemo2026!` | Health Unit 2 clinical documentation and all four queues; activity-management permission is enabled. |
 | Registered patient | Andrea Mendoza | `patient@quecare.local` | `QueCareDemo2026!` | Own appointments, tracking, records, and sharing. Date of birth: **12 April 1996**. |
-| Guest patient | Enter a fictional patient | No account | None | Daily QR registration and private tracking; no login required. |
+| Guest patient | Enter a fictional patient | No account | None | Session QR registration and private tracking; no login required. |
 
 **Additional account for the cross-Health Unit demonstration — create before presenting:**
 
@@ -59,7 +59,7 @@ The Health Unit 4 provider is **not seeded**. A CHO account cannot substitute fo
 7. Prepare a small PDF, PNG, or JPEG containing only fictional content, at most **5 MB**, for attachment upload.
 8. Create the Health Unit 4 provider account from Section 2. Confirm that Andrea's seeded Health Unit 2 sample note appears when signed in as the patient. To create an additional note, Andrea must first have a visit at Health Unit 2; the seeded note alone does not establish a visit for her.
 9. Prepare the appointment timing below. Seeded activities are initially scheduled three days after seeding and are created only if there are no activities; do not assume they are still bookable on presentation day.
-10. Leave **Close session** until the final segment. A session closed today cannot be reopened today.
+10. Leave **Close session** until the final segment. With the default queue settings, closing the session ends queue operations for the day.
 
 ### Appointment timing for a live presentation
 
@@ -108,7 +108,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 **Steps:**
 
 1. Open **Overview → Open daily session**, or **Live queues → Open session**, if today's session is not already open.
-2. Select **Show QR code** or **Daily QR**.
+2. Select **Show QR code** or **Session QR**.
 3. Show the Health Unit and date; use **Copy registration link** for the guest profile.
 4. Select **Open live monitor** or **Monitor** and show its separate tab. Use **Enter fullscreen** if appropriate.
 
@@ -359,7 +359,7 @@ Do not issue Andrea a separate walk-in number before appointment check-in. Check
 3. Read the consequences, tick **I have checked the remaining patients**, and select **Close daily session**.
 4. Show the closed state. In the guest profile, reopen today's QR link to demonstrate expiry.
 
-**Say:** “Closing the day stops further registration through this QR. Remaining active visits become unserved and pending arrivals expire. Today's closed session cannot be reopened.”
+**Say:** “Closing the day stops further registration through this QR. Remaining active visits become unserved and pending arrivals expire. With the default queue settings, this ends queue operations for the day.”
 
 **Show as evidence:** The session is closed and its registration link is no longer usable. If another presentation is scheduled today, explain this feature without submitting closure.
 

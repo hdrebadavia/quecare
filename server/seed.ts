@@ -13,9 +13,11 @@ await transaction(async db=>{
   const queues=(await db.query('SELECT * FROM queues WHERE facility_id=$1 ORDER BY sort_order',[f.id])).rows;
   for(const q of queues){for(const u of [officer,provider])await db.query('INSERT INTO queue_assignments(user_id,queue_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[u.id,q.id]);}
   if(!await one(db,'SELECT id FROM patients WHERE user_id=$1',[patientUser.id]))await db.query("INSERT INTO patients(user_id,name,birth_date,barangay,phone,first_name,last_name,sex) VALUES($1,$2,'1996-04-12','Calvario','','Andrea','Mendoza','Female')",[patientUser.id,patientUser.name]);
-  const existing=await one(db,'SELECT id FROM daily_sessions WHERE facility_id=$1 AND day=$2',[f.id,dayInManila()]);
+  await db.query('SELECT id FROM facilities WHERE id=$1 FOR NO KEY UPDATE',[f.id]);
+  const day=dayInManila();
+  const existing=await one(db,'SELECT id FROM daily_sessions WHERE facility_id=$1 AND day=$2 LIMIT 1',[f.id,day]);
   if(!existing){
-    const session=await one(db,'INSERT INTO daily_sessions(facility_id,day,token,next_number) VALUES($1,$2,$3,17) RETURNING *',[f.id,dayInManila(),token()]);
+    const session=await one(db,'INSERT INTO daily_sessions(facility_id,day,token,next_number) VALUES($1,$2,$3,17) RETURNING *',[f.id,day,token()]);
     const names=['Rafael Dela Cruz','Sofia Ramos','Miguel Torres','Elena Santos','Carlo Bautista','Lia Navarro','Gabriel Flores','Mia Villanueva','Paolo Reyes','Isabella Cruz','Luis Aquino','Camila Garcia','Noah Santiago','Julia Lopez','Marco Mendoza','Ava Castillo'];
     for(let i=0;i<names.length;i++){
       const p=await one(db,"INSERT INTO patients(name,birth_date,barangay) VALUES($1,'1990-06-15','Calvario') RETURNING id",[names[i]]);

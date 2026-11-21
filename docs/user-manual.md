@@ -349,11 +349,11 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 
 1. Confirm your assigned Health Unit.
 2. In **Overview**, select **Open daily session**, or in **Live queues**, select **Open session**.
-3. Select **Show QR code** in Overview or **Daily QR** in Live queues.
+3. Select **Show QR code** in Overview or **Session QR** in Live queues.
 4. Display the QR for patients or use **Copy registration link** to share today's registration URL through the facility's normal process.
 5. If testing registration, select **Open registration**.
 
-**Expected result:** today's session is open and patients can submit pending arrivals. Opening today's session expires unclosed prior-day sessions. The QR expires when its daily session closes; use a fresh daily QR for each operating day.
+**Expected result:** today's session is open and patients can submit pending arrivals. Opening today's session expires unclosed prior-day sessions. Each session has its own QR, which expires at closure.
 
 ### F2. Open the waiting-area monitor
 
@@ -418,7 +418,9 @@ Administrators can also perform applicable queue and appointment tasks in Sectio
 3. In **Live queues**, select **Close session**.
 4. Read the consequences, tick **I have checked the remaining patients**, and select **Close daily session**.
 
-**Expected result:** remaining active visits become unserved, pending registrations expire, and today's QR stops working. **A closed daily session cannot be reopened on the same day.** Close it only when the day's registration and queue operation should end.
+**Expected result:** remaining active visits become unserved, pending registrations expire, and today's QR stops working. By default, closing the session ends queue operations for the Manila day.
+
+To run another session that day, open **Administration → Queue stations**, turn on **Allow multiple sessions per day**, and select **Save queue settings**. After closing the active session, choose **Open new session** in **Overview** or **Live queues**. Share the new QR. Queue numbers continue from the previous session until the next Manila day. Turning the setting off leaves any active session open and prevents further sessions that day.
 
 ## 8. CHO or system administrators
 
@@ -516,7 +518,7 @@ All queue hours, appointment slots, and original-arrival entry times use **Asia/
 | Registration says pending and no number appears | Go to the front desk for identity and on-site arrival confirmation. Avoid submitting another profile. |
 | Lost tracking link | Try **My care hub → Follow your number** on the same browser. Otherwise ask the front desk for help locating today's visit. |
 | Another person's ticket opens on a shared device | The browser may have saved their last tracking reference. Use your own private link and keep links separate. |
-| Session is closed | Ask the administrator about today's operating status. A session deliberately closed today cannot be reopened today. |
+| Session is closed | Ask the administrator about today's operating status. An administrator can open a new session if multiple sessions are enabled for this Health Unit. |
 | No assigned queues / permission denied | Confirm the account and Health Unit. Ask the administrator to check queue assignment or activity-management permission. |
 | Outside-hours or priority reason required | Authorized staff should verify the situation and enter a reason in the issuance/check-in form. |
 | Cannot call the next patient | Check session and queue status, waiting count, connection, and whether a number is already called or serving. |

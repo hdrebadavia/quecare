@@ -25,10 +25,11 @@ export async function issueVisit(db: DB, user: User, input: { patientId: string;
   await audit(db,user,'visit.check_in',visit.id,q.facility_id,{reason:input.reason || '',reconstructed:!!input.reconstructed});
   return visit;
 }
-export async function queueAction(db: DB, user: User, queueId: string, action: string, input: { entryId?: string; destinationId?: string; reason?: string }) {
+export async function queueAction(db: DB, user: User, queueId: string, action: string, input: { entryId?: string; sessionId?: string; destinationId?: string; reason?: string }) {
   let queue = await queueAccess(db,user,queueId);
   const session = await one(db,"SELECT id FROM daily_sessions WHERE facility_id=$1 AND day=$2 AND status='open' FOR UPDATE",[queue.facility_id,dayInManila()]);
   ensure(session,'Open today’s session first.');
+  ensure(!input.sessionId || input.sessionId===session.id,'The queue session has changed. Refresh and try again.',409);
   queue = await queueAccess(db,user,queueId);
   ensure(queue.status !== 'archived' && queue.status !== 'closed','Queue is closed.');
   let entry;

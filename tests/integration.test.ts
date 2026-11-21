@@ -155,6 +155,62 @@ suite('PostgreSQL-backed application workflows',()=>{
   it('expires the daily QR and marks remaining visits unserved on closure',async()=>{
     const v=await checkin((await makePatient()).id);await post(admin,`/sessions/${s.id}/close`).expect(200);await request(app).get(`/api/join/${s.token}`).expect(410);expect((await db.query('SELECT status FROM visits WHERE id=$1',[v.body.id])).rows[0].status).toBe('unserved');
   });
+  it('defaults to one queue session per day and restricts queue settings to Health Unit administrators',async()=>{
+    const path=`/facilities/${f.id}/queue-settings`;
+    const settings={allowMultipleDailySessions:true};
+    await mutate(officer,'put',path,settings).expect(403);
+    const other=await newUnit();
+    await mutate(admin,'put',`/facilities/${other.id}/queue-settings`,settings).expect(403);
+    const dashboard=await admin.get(`/api/staff/dashboard?facility=${f.id}`).expect(200);
+    expect(dashboard.body.allowMultipleDailySessions).toBe(false);
+    const open=await post(admin,'/sessions/open',{facilityId:f.id}).expect(200);
+    expect(open.body.id).toBe(s.id);
+    await post(admin,`/sessions/${s.id}/close`).expect(200);
+    await post(admin,'/sessions/open',{facilityId:f.id}).expect(400);
+  });
+  it('opens a distinct same-day session with a fresh QR and preserves daily numbering and totals',async()=>{
+    const first=await checkin(p.id);
+    expect(first.status).toBe(200);
+    expect((await action('call')).status).toBe(200);
+    const pending=await post(patient2,`/join/${s.token}`,{queueId:q.id,consent:true}).expect(200);
+    const path=`/facilities/${f.id}/queue-settings`;
+    await mutate(admin,'put',path,{allowMultipleDailySessions:true}).expect(200);
+    await post(admin,`/sessions/${s.id}/close`).expect(200);
+
+    const [second,retry]=await Promise.all([
+      post(admin,'/sessions/open',{facilityId:f.id}).expect(200),
+      post(systemAdmin,'/sessions/open',{facilityId:f.id}).expect(200),
+    ]);
+    expect(second.body.id).not.toBe(s.id);
+    expect(second.body.token).not.toBe(s.token);
+    expect(retry.body.id).toBe(second.body.id);
+    await request(app).get(`/api/join/${s.token}`).expect(410);
+    await request(app).get(`/api/join/${second.body.token}`).expect(200);
+    const tracking=await request(app).get(`/api/tracking/${pending.body.tracking_token}`).expect(200);
+    expect(tracking.body.status).toBe('expired');
+    await post(admin,`/sessions/${s.id}/close`).expect(200);
+
+    const next=await post(officer,'/visits/check-in',{patientId:p.id,queueId:q.id,sessionId:second.body.id}).expect(200);
+    expect(next.body.number).toBe(first.body.number+1);
+    const live=await request(app).get(`/api/public/queues/${f.id}`).expect(200);
+    expect(live.body.sessionOpen).toBe(true);
+    expect(live.body.queues.find((queue:any)=>queue.id===q.id)).toMatchObject({serving:[],waiting:[{number:next.body.number}]});
+    const dashboard=await admin.get(`/api/staff/dashboard?facility=${f.id}`).expect(200);
+    expect(dashboard.body.session.id).toBe(second.body.id);
+    expect(dashboard.body.pending).toEqual([]);
+    expect(dashboard.body.summary.total).toBe(2);
+    const report=await admin.get(`/api/reports?facility=${f.id}`).expect(200);
+    expect(report.body.daily).toMatchObject([{day:s.day,visits:2}]);
+    expect((await action('call',undefined,undefined,{sessionId:s.id})).status).toBe(409);
+    expect((await action('call',undefined,undefined,{sessionId:second.body.id})).status).toBe(200);
+
+    await mutate(systemAdmin,'put',path,{allowMultipleDailySessions:false}).expect(200);
+    const stillOpen=await post(admin,'/sessions/open',{facilityId:f.id}).expect(200);
+    expect(stillOpen.body.id).toBe(second.body.id);
+    await post(admin,`/sessions/${second.body.id}/close`).expect(200);
+    await post(admin,'/sessions/open',{facilityId:f.id}).expect(400);
+    expect((await db.query('SELECT id FROM daily_sessions WHERE facility_id=$1',[f.id])).rowCount).toBe(2);
+  });
   it('expires an unclosed prior day before opening or returning today’s session',async()=>{
     const old=(await db.query("INSERT INTO daily_sessions(facility_id,day,token) VALUES($1,(now() AT TIME ZONE 'Asia/Manila')::date-1,$2) RETURNING id",[f.id,randomBytes(24).toString('hex')])).rows[0];const oldPatient=await makePatient();const v=(await db.query('INSERT INTO visits(session_id,patient_id,number,tracking_token) VALUES($1,$2,1,$3) RETURNING id',[old.id,oldPatient.id,randomBytes(24).toString('hex')])).rows[0];await db.query("INSERT INTO queue_entries(visit_id,queue_id,status) VALUES($1,$2,'called')",[v.id,q.id]);
     await post(admin,'/sessions/open',{facilityId:f.id}).expect(200);expect((await db.query('SELECT status FROM visits WHERE id=$1',[v.id])).rows[0].status).toBe('unserved');await checkin((await makePatient()).id);await action('call').then(r=>expect(r.status).toBe(200));
@@ -256,7 +312,7 @@ suite('PostgreSQL-backed application workflows',()=>{
     expect((await officer.get(`/api/patients/${created.body.id}`)).body.barangay).toBe('');
     await post(officer,'/patients',{...intake,regionCode:'0300000000'}).expect(400);
   });
-  it('applies migration 002 once to a populated initial schema without changing patient history',async()=>{
+  it('applies migrations once to a populated initial schema without changing patient history',async()=>{
     const client=await root.connect(),migrationSchema='migration_'+randomBytes(6).toString('hex');
     try {
       await client.query(`CREATE SCHEMA ${migrationSchema}`);await client.query(`SET search_path=${migrationSchema}`);
@@ -271,7 +327,8 @@ suite('PostgreSQL-backed application workflows',()=>{
       expect((await client.query('SELECT patient_id FROM visits WHERE id=$1',[oldVisit.id])).rows[0].patient_id).toBe(old.id);
       const migrated=(await client.query('SELECT * FROM patients WHERE id=$1',[old.id])).rows[0];
       expect(migrated).toMatchObject({id:old.id,name:'Original Full Name',barangay:'Legacy address',first_name:'',sex:'',dswd_nhts:null});
-      expect((await client.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map(r=>r.version)).toEqual(['001','002']);
+      expect((await client.query('SELECT allow_multiple_daily_sessions FROM facilities WHERE id=$1',[oldFacility.id])).rows[0].allow_multiple_daily_sessions).toBe(false);
+      expect((await client.query('SELECT version FROM schema_migrations ORDER BY version')).rows.map(r=>r.version)).toEqual(['001','002','003']);
     } finally {await client.query('SET search_path=public');await client.query(`DROP SCHEMA ${migrationSchema} CASCADE`);client.release();}
   });
   it('requires guardian details for guest minors',async()=>{
